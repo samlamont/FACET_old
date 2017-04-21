@@ -6,9 +6,9 @@ Created on Tue Dec  6 16:11:00 2016
 """
 
 import timeit
-from PyQt4 import QtGui, QtCore, uic
+from PyQt4 import QtGui, uic
 import sys
-import numpy as np
+#import numpy as np
 #from numpy import array
 #from scipy import ndimage
 #import os
@@ -21,7 +21,7 @@ import fiona
 #from fiona.crs import to_string
 #from math import isinf, sqrt #, hypot, modf, atan, ceil
 #import matplotlib.pyplot as plt
-import pandas as pd
+#import pandas as pd
 
 import funcs_v2
 
@@ -35,8 +35,8 @@ import funcs_v2
 # ===================================================================================
 #                                       MAIN
 # ===================================================================================
-#class facet(QtGui.QWidget):
-class facet(QtGui.QTabWidget):
+class facet(QtGui.QDialog):
+#class facet(QtGui.QTabWidget):
 #class MainForm(QtGui.QDialog, FORM_CLASS):
     
     def __init__(self, parent=None):        
@@ -53,6 +53,10 @@ class facet(QtGui.QTabWidget):
         self.browseDEM_Curve.clicked.connect(self.get_dem_file)           # DEM - curvature
         self.browseStreams_Curve.clicked.connect(self.get_streams_file)   # Streams - curvature
         self.browseBankPixels.clicked.connect(self.get_or_set_bankpixels) # Bank Pixels      
+        
+        # << Button box >>
+        self.buttonBox.accepted.connect(self.run_main)        
+        self.buttonBox.rejected.connect(self.close)
         # ===========
         
     # =========================================    
@@ -61,11 +65,11 @@ class facet(QtGui.QTabWidget):
     def get_dem_file(self):
         fname_dem = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Grids (*.*)')
         
-        if self.tab_widget.currentIndex() == 0:        
-            self.demPath_bankpts.setText(fname_dem)
+        if self.tabWidget.currentIndex() == 0:        
+            self.textDEM_xns.setText(fname_dem)
 
-        if self.tab_widget.currentIndex() == 1:        
-            self.demPath_bankpixels.setText(fname_dem)
+        if self.tabWidget.currentIndex() == 1:        
+            self.textDEM_curvature.setText(fname_dem)
             
 #        if self.tab_widget.currentIndex() == 2:        
 #            self.demPath_hand.setText(fname_dem)            
@@ -98,35 +102,33 @@ class facet(QtGui.QTabWidget):
     def get_streams_file(self):
         fname_streams = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
 
-        if self.tab_widget.currentIndex() == 0:        
-            self.streamsPath_bankpts.setText(fname_streams) 
+        if self.tabWidget.currentIndex() == 0:        
+            self.textStreams_xns.setText(fname_streams) 
             
             # Also load the reach ID combo box here...
             with fiona.open(str(fname_streams), 'r') as streamlines:
-    #            print(streamlines.schema['properties'].keys())
                 lst_fieldnames = streamlines.schema['properties'].keys()      
                 self.streamlines_crs = streamlines.crs
                 print('Streamlines crs: {}'.format(streamlines.crs))
             if lst_fieldnames:
                 for name in lst_fieldnames:
-                    self.reachid_bankpts.addItem(str(name))            
+                    self.comboBoxXns.addItem(str(name))            
 
-        if self.tab_widget.currentIndex() == 1:        
-            self.streamsPath_bankpixels.setText(fname_streams) 
+        if self.tabWidget.currentIndex() == 1:        
+            self.textStreams_curvature.setText(fname_streams) 
         
             # Also load the reach ID combo box here...
             with fiona.open(str(fname_streams), 'r') as streamlines:
-    #            print(streamlines.schema['properties'].keys())
                 lst_fieldnames = streamlines.schema['properties'].keys()      
                 self.streamlines_crs = streamlines.crs
                 print('Streamlines crs: {}'.format(streamlines.crs))
             if lst_fieldnames:
                 for name in lst_fieldnames:
-                    self.reachid_bankpixels.addItem(str(name))
+                    self.comboBoxCurvature.addItem(str(name))
 
     def set_bankpts_file(self):
         fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
-        self.bankptsPath.setText(fname)  
+        self.textBankPts.setText(fname)  
         
 #    def get_bankpts_file(self):
 #        fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
@@ -135,23 +137,23 @@ class facet(QtGui.QTabWidget):
     def get_or_set_xns_file(self):
         if self.ck_createXns.isChecked():
             fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
-            self.xnsPath.setText(fname)
+            self.textXns.setText(fname)
         else:
             fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
-            self.xnsPath.setText(fname)  
+            self.textXns.setText(fname)  
         
     def get_or_set_bankpixels(self):
         if self.chkPixelMetrics.isChecked():
             fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Grids (*.*)')
-            self.bankpixelsPath.setText(fname)   
+            self.textBankPixels.setText(fname)   
         else:
             fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Grids (*.*)')
-            self.bankpixelsPath.setText(fname)             
+            self.textBankPixels.setText(fname)             
     
     # =========================================    
     #              << RUN MAIN >>    
     # =========================================
-    def run_main(self):
+    def run_main(self):        
                
         start_time_0 = timeit.default_timer()
         self.close()
