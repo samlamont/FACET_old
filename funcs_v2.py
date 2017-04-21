@@ -16,21 +16,21 @@ import sys
 from math import isinf, sqrt
 import rasterio
 import rasterio.tools.mask
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
+#import matplotlib.pyplot as plt
+#plt.style.use('ggplot')
+#from mpl_toolkits.mplot3d import Axes3D
+#from matplotlib import cm
 
 #from affine import Affine
 import pandas as pd
 #from scipy import ndimage
-from shapely.geometry import LineString
-from shapely.geometry import shape, mapping
+#from shapely.geometry import Point, 
+from shapely.geometry import shape, mapping, LineString
 #from jenks import jenks
 
 import fiona
 
-plt.ion()
+#plt.ion()
 
 #from shapely import speedups
 #if speedups.available:
@@ -90,6 +90,130 @@ def get_feature_count(str_shp_path):
         
     return i_count
 
+# ===============================================================================
+#  Calculate channel width based on bank pixels and stream line buffers, 
+#  potentially subdividing using Xn's
+# =============================================================================== 
+def channel_width_bankpixels_segments(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size):
+    
+#    lst_output=[]
+    
+    # Create the filename and path for the output file... # NOT OS INDEPENDENT??
+    head, tail = os.path.split(str_streamlines_path)    
+    str_outname = tail[:-4] + '_chwidth.shp'
+    str_outpath = head + '/' + str_outname 
+    
+    gp_coords = df_coords.groupby('linkno')
+    
+#    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
+    schema_output = {'geometry': 'LineString', 'properties': {'width': 'float'}}
+    
+    # Open the bankpts layer...
+    with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
+        
+        # Open the streamlines layer...
+        with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+       
+            # Get the crs...
+            streamlines_crs = streamlines.crs                
+            streamlines_schema = streamlines.schema.copy()
+            streamlines_schema['properties']['chan_width'] = 'float'
+            
+            # Open another file to write the width...
+            with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
+                
+                for i_linkno, df_linkno in gp_coords:
+            
+                    i_linkno = int(i_linkno)
+                    
+                    print('linkno:  {}'.format(i_linkno))
+          
+                    # Now loop over df_linkno
+                    # Set up index array for looping...
+                    arr_ind = np.arange(0, len(df_linkno.index)+1, 10) # NOTE: Change the step for resolution?
+                    
+                    for i, indx in enumerate(arr_ind):
+                        
+                        try:
+                            arr_x = df_linkno.x.iloc[indx:arr_ind[i+1]].values
+                            arr_y = df_linkno.y.iloc[indx:arr_ind[i+1]].values            
+                        except:
+                            break
+              
+                        # Create a line segment from endpts in df_linkno...
+                        ls = LineString(zip(arr_x, arr_y))
+                        
+                        lst_tally=[]
+                        
+                        # Buffer each feature...
+                        geom = shape(ls)   # Convert to shapely geometry to operate on it
+                               
+                        # Successive buffer-mask operations to count bank pixels at certain intervals
+                        prev_val=0
+                        lst_buff=range(cell_size,30,cell_size)
+                        for buff_dist in lst_buff:
+                            
+                            geom_buff = geom.buffer(buff_dist,cap_style=2)
+                            buff = mapping(geom_buff)           
+                            
+#                            # Write out buffer polygon(s)...NOTE:  Could write out ind
+#                            with fiona.open(r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\buffer.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
+#                                buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
+#                            sys.exit()                    
+                                        
+                            # Mask the bankpts file for each feature...
+                            out_image, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [buff], crop=True)                    
+                            num_pixels = len(out_image[out_image>0])
+                            
+                            # You want the number of pixels gained by each interval...                    
+                            interval = num_pixels-prev_val                    
+                            prev_val = num_pixels
+                            
+                            tpl_out = i_linkno, buff_dist, num_pixels, interval
+                            lst_tally.append(tpl_out)                    
+                            df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','cumulative','interval'])
+                   
+        
+                        # Avoid division by zero                     
+#                        if df_tally.interval.sum() == 0:
+#                            continue                    
+                        
+                        # Calculate weighted average                     
+                        # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
+                        try:                        
+                            weighted_avg=0 
+                            n_top=2
+                            for tpl in df_tally.nlargest(n_top, 'interval').itertuples():
+                                weighted_avg += tpl.buffer*(np.float(tpl.interval)/np.float(df_tally.nlargest(n_top, 'interval').sum().interval))
+                                
+                            weighted_avg=weighted_avg*2   # Multiply buffer by 2 to get width
+                        except:
+#                            weighted_avg=-9999.
+                            continue
+                        
+                        # Write to an output file here...
+                        output.write({'properties':{'width': weighted_avg}, 'geometry':mapping(ls)})
+                                                
+#                    if i_linkno > 10:
+#                        break
+                    
+#                    # To save the output...    
+#                    tpl_output = (line['properties'][str_reachid],weighted_avg)                    
+#                    lst_output.append(tpl_output)
+                                
+                    # FOR TESTING...
+    #                if line['properties'][str_reachid] == 13:                                        
+    #                    print('pause')     
+#                    df_linkno.plot.bar(x='buffer', y='interval', title='linkno: {} | width: {}'.format(line['properties'][str_reachid], weighted_avg))                    
+#                    sys.exit()
+    
+#    # Write to a csv...
+#    pd_output = pd.DataFrame(lst_output)    
+#    pd_output.to_csv('/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/channel_width_test.csv')
+    
+    
+    return
+    
 # ===============================================================================
 #  Calculate channel width based on bank pixels and stream line buffers, 
 #  potentially subdividing using Xn's
@@ -1449,7 +1573,7 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
                     lf_pt = {'type': 'Point', 'coordinates':tpl_left}
                     rt_pt = {'type': 'Point', 'coordinates':tpl_right}
                    
-                    prop = {'xn_num':int(tpl_row.Index),'linkno':tpl_row.linkno_x,'bank_hght':tpl_row.bank_height,'bank_elev':tpl_row.bank_elev,
+                    prop = {'xn_num':int(tpl_row.Index),'linkno':int(tpl_row.linkno_x),'bank_hght':tpl_row.bank_height,'bank_elev':tpl_row.bank_elev,
                             'lf_bnk_ang':tpl_row.lf_bank_ang,'rt_bnk_ang':tpl_row.rt_bank_ang,'bf_area':tpl_row.bankful_area,
                             'chan_width':tpl_row.chan_width,'obank_rat':tpl_row.overbank_ratio,'area_ratio':tpl_row.area_ratio}
                             
@@ -1574,6 +1698,8 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
     
     gp_coords = df_coords.groupby('linkno')
     
+    
+       
     # Create the Xn shapefile for writing...
 #    test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int', 'endpt1_x':'float', 'endpt1_y':'float', 'endpt2_x':'float', 'endpt2_y':'float'}} 
     test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int'}} 
@@ -1584,6 +1710,20 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         for i_linkno, df_linkno in gp_coords:
             
             i_linkno = int(i_linkno)
+            
+            # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
+            i_order = df_linkno.order.iloc[0]
+            if i_order == 1:
+                p_xnlength=20
+            elif i_order == 2:
+                p_xnlength=23
+            elif i_order == 3:
+                p_xnlength=40
+            elif i_order == 4:
+                p_xnlength=50 
+            elif i_order == 5:
+                p_xnlength=60                
+#    
     
             reach_len = len(df_linkno['x'])
         
@@ -1666,7 +1806,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
 # ===================================================================================
 #  Build Xn's based on vector features
 # ===================================================================================
-def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid):
+def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid, str_orderid):
         
 #    lst_verts=[]    # to contain the x-y vertex pairs (list of lists)
 #    lst_linknos=[]
@@ -1674,11 +1814,14 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
     lst_x=[]
     lst_y=[]
     lst_linkno=[]
-    
+    lst_order=[]
+       
 #    # TESTESTSETSETESTESTSETSETSETETEST 
 #    with rasterio.open('/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEM_02050205_USGS_AEA.tif') as ds_dem:
 #
 #        test = ds_dem.crs    
+
+#    from fiona import crs
         
     p_interp_spacing = cell_size #3 # larger numbers would simulate a more smoothed reach | NOTE: Hardcode this = grid resolution?
     j=0
@@ -1686,11 +1829,13 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
     with fiona.open(str(str_streams_filepath), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
    
         # Get the crs...
-        streamlines_crs = streamlines.crs          
-      
+        streamlines_crs = streamlines.crs  
+#        str_proj4 = crs.to_string(streamlines.crs)         
+        
         for line in streamlines:
            j+=1
-           i_linkno = line['properties'][str_reachid]
+           i_linkno = line['properties'][str_reachid]           
+           i_order = line['properties'][str_orderid]
            
            print('{} | {}'.format(i_linkno, j))
            
@@ -1710,9 +1855,10 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
                    
                    lst_x.append(i_pt[0])
                    lst_y.append(i_pt[1])
-                   lst_linkno.append(i_linkno)                                     
+                   lst_linkno.append(i_linkno)   
+                   lst_order.append(i_order)
            
-               df_coords = pd.DataFrame({'x':lst_x, 'y':lst_y, 'linkno':lst_linkno})
+               df_coords = pd.DataFrame({'x':lst_x, 'y':lst_y, 'linkno':lst_linkno, 'order':lst_order})
 #               df_coords.set_index('linkno', inplace=True)  
                
 #           if j == 100:
