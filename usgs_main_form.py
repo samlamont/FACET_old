@@ -42,8 +42,8 @@ class facet(QtGui.QDialog):
     def __init__(self, parent=None):        
         super(facet, self).__init__(parent)
         
-        # === UI ====
-        uic.loadUi('facet.ui', self)  # TESTING
+        # ================= UI ================
+        uic.loadUi('facet.ui', self)  
         
         # << Browse buttons >>
         self.browseDEM_Xns.clicked.connect(self.get_dem_file)             # DEM - Xns
@@ -57,7 +57,21 @@ class facet(QtGui.QDialog):
         # << Button box >>
         self.buttonBox.accepted.connect(self.run_main)        
         self.buttonBox.rejected.connect(self.close)
-        # ===========
+#        self.pushButton.clicked.connect(self.run_main)
+        
+        # << Defaults >>
+        self.textFitLength.setText('3')
+        self.textXnSpacing.setText('3')
+        self.textXnLength.setText('30')
+        self.textVertIncrement.setText('0.2')
+        self.textRatioThresh.setText('1.5')
+        self.textSlpThresh.setText('0.03')        
+        
+        # << Progress Bar >>
+#        self.progressBar.setVisible(False)
+#        self.progressBar.setTextVisible(False)
+        
+        # =====================================
         
     # =========================================    
     #              << FILE I/O >>    
@@ -103,7 +117,7 @@ class facet(QtGui.QDialog):
         fname_streams = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
 
         if self.tabWidget.currentIndex() == 0:        
-            self.textStreams_xns.setText(fname_streams) 
+            self.textStreams_Xns.setText(fname_streams) 
             
             # Also load the reach ID combo box here...
             with fiona.open(str(fname_streams), 'r') as streamlines:
@@ -135,7 +149,7 @@ class facet(QtGui.QDialog):
 #        self.bankptsPath.setText(fname)  
         
     def get_or_set_xns_file(self):
-        if self.ck_createXns.isChecked():
+        if self.chkCreateXns.isChecked():
             fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
             self.textXns.setText(fname)
         else:
@@ -154,9 +168,12 @@ class facet(QtGui.QDialog):
     #              << RUN MAIN >>    
     # =========================================
     def run_main(self):        
+        
+#        self.progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(self.rename_list), self)
                
         start_time_0 = timeit.default_timer()
-        self.close()
+#        self.close() # keep open to display progress bar?
+#        self.show()
         
 #         Check which tab is active??
 #        i_tab = self.tab_widget.currentIndex() # (0: bankpts; 1: bankpixels; 2: FP-HAND)
@@ -167,19 +184,21 @@ class facet(QtGui.QDialog):
             QtGui.QMessageBox.critical(self, 'Warning!', 'Coordinate Systems of DEM and Streams Layer May Not Match')
 #            sys.exit()
             
+        str_orderid='Order_'
+            
         # << Generate Cross Sections >>
-        if self.ck_createXns.isChecked():
+        if self.chkCreateXns.isChecked():
+            
+#            print('here')
                    
             # Build reach coords and get crs from a pre-existing streamline shapefile...
-            df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.streamsPath_bankpts.text(), self.cell_size, str(self.reachid_bankpts.currentText()))
-            
+            df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_Xns.text(), self.cell_size, str(self.comboBoxXns.currentText()), str_orderid, self)
+
             # Build and write the Xn shapefile...
-            funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(self.xnsPath.text()), False, int(self.p_xngap.text()), int(self.p_fitlength.text()), float(self.p_xnlength.text()))     
+            funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(self.textXns.text()), False, int(self.textXnSpacing.text()), int(self.textFitLength.text()), float(self.textXnLength.text()), self)     
         
         # << Calculate Channel Metrics -- Bank Points Method >>
-        if self.ck_chanmetrics_bankpts.isChecked():
-
-#            print('here!')
+        if self.chkMetricsXns.isChecked():
 
             # Read the cross section shapefile and interplote elevation along each one using the specified DEM
             df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(self.xnsPath.text(), self.demPath_bankpts.text())
@@ -190,7 +209,7 @@ class facet(QtGui.QDialog):
             funcs_v2.chanmetrics_bankpts(df_xn_elev, str(self.xnsPath.text()), str(self.demPath_bankpts.text()), str(self.bankptsPath.text()), float(self.p_ivert.text()), XnPtDist, float(self.p_ratiothresh.text()), float(self.p_slpthresh.text()))
                    
         # << Create bank pixel layer (.tif) >>
-        if self.ck_createPixels.isChecked():
+        if self.chkBankPixels.isChecked():
              
             print('Reading streamline coordinates...') 
             df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.streamsPath_bankpixels.text(), self.cell_size, str(self.reachid_bankpixels.currentText()))
@@ -199,7 +218,7 @@ class facet(QtGui.QDialog):
             funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.demPath_bankpixels.text()), str(self.bankpixelsPath.text()))
             
         # << Calculate Channel Metrics -- Bank Pixels Method >>
-        if self.ck_chanmetrics_pixels.isChecked():
+        if self.chkPixelMetrics.isChecked():
             print('Calculating channel width from bank pixel layer!')
             # def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reachid):                        
             funcs_v2.channel_width_bankpixels(self.streamsPath_bankpixels.text(), self.bankpixelsPath.text(), self.reachid_bankpixels.currentText(), self.cell_size)
@@ -208,12 +227,12 @@ class facet(QtGui.QDialog):
 #        if self.ck_fp.isChecked():
 #            print('Create floodplain here!')
             
-        # << Run All Functions >>
-        if self.ck_runall_bankpts.isChecked():
-            print('Run all is currently disabled')
-
-        if self.ck_runall_pixels.isChecked():
-            print('Run all is currently disabled')
+#        # << Run All Functions >>
+#        if self.ck_runall_bankpts.isChecked():
+#            print('Run all is currently disabled')
+#
+#        if self.ck_runall_pixels.isChecked():
+#            print('Run all is currently disabled')
             
         print('Done with main!')
                 

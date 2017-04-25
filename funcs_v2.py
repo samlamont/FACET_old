@@ -27,6 +27,7 @@ import pandas as pd
 #from shapely.geometry import Point, 
 from shapely.geometry import shape, mapping, LineString
 #from jenks import jenks
+from PyQt4 import QtGui
 
 import fiona
 
@@ -1679,7 +1680,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
 # ===================================================================================
 #  Build the Xns for all reaches and write to shapefile
 # ===================================================================================
-def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xngap, p_fitlength, p_xnlength):
+def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xngap, p_fitlength, p_xnlength, self):
     """
         Builds Xns from x-y pairs representing shapely interpolations along a reach
 
@@ -1688,7 +1689,12 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         Output: list of tuples of lists describing the Xn's along a reach (row, col)
         
     """
-
+    j=0
+    progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(df_coords.index), self)
+    progDialog.setGeometry(200, 80, 250, 20)
+    progDialog.setWindowTitle('Build stream coordinates')
+    progDialog.show()      
+    
     slopeCutoffVertical = 20 # just a threshold determining when to call a Xn vertical (if it's above this, make it vertical. Otherwise things get whacky?)
 
     lst_xnrowcols = [] # the final output, a list of tuples of XY coordinate pairs for all Xn's for this reach
@@ -1696,17 +1702,15 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
     XnCntr = 0
     m_init = 0
     
-    gp_coords = df_coords.groupby('linkno')
-    
-    
-       
+    gp_coords = df_coords.groupby('linkno')  
+           
     # Create the Xn shapefile for writing...
 #    test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int', 'endpt1_x':'float', 'endpt1_y':'float', 'endpt2_x':'float', 'endpt2_y':'float'}} 
     test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int'}} 
     
     print('Building and Writing Cross Section File...')
     with fiona.open(str_xns_path, 'w', driver='ESRI Shapefile', crs=streamlines_crs, schema=test_schema) as chan_xns:
-#        lst_xy=[]
+        
         for i_linkno, df_linkno in gp_coords:
             
             i_linkno = int(i_linkno)
@@ -1722,8 +1726,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
             elif i_order == 4:
                 p_xnlength=50 
             elif i_order == 5:
-                p_xnlength=60                
-#    
+                p_xnlength=60                    
     
             reach_len = len(df_linkno['x'])
         
@@ -1733,6 +1736,9 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         
             # Loop along the reach at the specified intervals...(Xn loop)
             for i in range( p_xngap, reach_len-p_xngap, p_xngap ):
+                
+                progDialog.setValue(j)
+                j+=1                
         
                 lstThisSegmentRows = []
                 lstThisSegmentCols = []
@@ -1801,12 +1807,14 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
 #                if XnCntr > 10:
 #                    break
 
+        progDialog.close()
+        
     return lst_xnrowcols
     
 # ===================================================================================
 #  Build Xn's based on vector features
 # ===================================================================================
-def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid, str_orderid):
+def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid, str_orderid, self):
         
 #    lst_verts=[]    # to contain the x-y vertex pairs (list of lists)
 #    lst_linknos=[]
@@ -1832,7 +1840,15 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
         streamlines_crs = streamlines.crs  
 #        str_proj4 = crs.to_string(streamlines.crs)         
         
+        progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(streamlines), self)
+        progDialog.setGeometry(200, 80, 250, 20)
+        progDialog.setWindowTitle('Build stream coordinates')
+        progDialog.show()
+        
         for line in streamlines:
+            
+           progDialog.setValue(j)
+           
            j+=1
            i_linkno = line['properties'][str_reachid]           
            i_order = line['properties'][str_orderid]
@@ -1865,6 +1881,8 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
 #               print('pause')
                
         df_coords.drop_duplicates(['x','y'], inplace=True) # duplicates due to interpolation (?)
+        
+        progDialog.close()
         
     return df_coords, streamlines_crs # A list of lists      
     
