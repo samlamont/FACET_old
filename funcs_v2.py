@@ -27,7 +27,7 @@ import pandas as pd
 #from shapely.geometry import Point, 
 from shapely.geometry import shape, mapping, LineString
 #from jenks import jenks
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 
 import fiona
 
@@ -36,6 +36,11 @@ import fiona
 #from shapely import speedups
 #if speedups.available:
 #    speedups.enable() # enable performance enhancements written in C
+
+# ===============================================================================
+#  Test progress bar class for functions
+# ===============================================================================
+
 
 
 # ===============================================================================
@@ -1358,15 +1363,29 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
     lst_bfmetrics = [] # list of tuples to contain output
 
     try:
-
+        
+#        # =========== Progress Dialog ================
+#        progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(df_xn_elev.index), self)
+#        progDialog.setGeometry(200, 80, 300, 20)
+#        progDialog.setWindowTitle('Calculating metrics from Xn\'s...')
+#        progDialog.setWindowModality(QtCore.Qt.WindowModal)
+#        progDialog.show()
+#        # ============================================  
+        
+#        progDialog.setRange(0, len(df_xn_elev.index))
+        
+#        j=0
         for tpl_row in df_xn_elev.itertuples():
+            
+#            progDialog.value(j)
+#            j+=1
             
             this_linkno = tpl_row.linkno
             
-            print('this_linkno: {} | index: {}'.format(this_linkno, tpl_row.Index))
+#            print('this_linkno: {} | index: {}'.format(this_linkno, tpl_row.Index))
             
-            if tpl_row.Index == 2254:
-                print('pause')
+#            if tpl_row.Index == 2254:
+#                print('pause')
 
             # A list to store the total number of indices/blocks in a Xn...
             lst_total_cnt = []
@@ -1486,6 +1505,8 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
     ##            else:
     ##                print 'no bank!'
 
+#        progDialog.close()
+    
     except Exception as e:
         print('\r\nError in analyze_xn_elev. Exception: {} \n'.format(e))
         sys.exit()
@@ -1496,7 +1517,7 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
 #  Calculate channel metrics based on the bankpoint slope-threshold method at each Xn,
 #   writing the bank points to a shapefile 
 # ====================================================================================
-def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh):
+def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh, self):
     
 #    # analyze_xnelev parameters...
 #    parm_ivert=0.2
@@ -1510,6 +1531,14 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
     # Striding...
     arr_strides = np.linspace(0, xn_count, xn_count/100)
     arr_strides = np.delete(arr_strides,0)  
+    
+    # =========== Progress Dialog ================
+    progDialog = QtGui.QProgressDialog("", "Cancel", 0, arr_strides.size, self)
+    progDialog.setGeometry(200, 80, 300, 20)
+    progDialog.setWindowTitle('Calculating metrics from Xn\'s...')
+    progDialog.setWindowModality(QtCore.Qt.WindowModal)
+    progDialog.show()
+    # ============================================    
 
     # Now loop over the linknos to get access grid by window...
     with rasterio.open(str_demPath) as ds_dem:
@@ -1521,11 +1550,15 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
         schema = {'geometry': 'Point', 'properties': {'xn_num': 'int', 'linkno':'int','bank_hght':'float','bank_elev':'float',
                     'lf_bnk_ang':'float','rt_bnk_ang':'float','bf_area':'float','chan_width':'float','obank_rat':'float',
                     'area_ratio':'float'}} 
-                    
+        
         with fiona.open(str_bankptsPath, 'w', driver='ESRI Shapefile', crs=dem_crs, schema=schema) as bankpts:
             
+            k=0
             j=0
             for indx in arr_strides:
+                
+                progDialog.setValue(k)
+                k+=1
                 
                 print('\tIndex {} - {}/{}'.format(j,int(indx),xn_count))        
                 df_xn_elev_n = df_xn_elev.iloc[j:int(indx)]
@@ -1541,6 +1574,8 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
                 df_bank_metrics.set_index('xn_no', inplace=True)
                 
                 df_map = pd.merge(df_xn_elev, df_bank_metrics, left_index=True, right_index=True) 
+                
+                progDialog.setRange(0, len(df_map.index))
                 
                 lst_lfbank_row=[]
                 lst_lfbank_col=[]
@@ -1564,8 +1599,11 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
                 df_map['rtbank_x'], df_map['rtbank_y'] = ds_dem.affine * (df_map['rtbank_col'], df_map['rtbank_row'])
                         
                 # Write bankpts shapefile...
-                print('Writing to bank points shapefile...')
+#                print('Writing to bank points shapefile...')
                 for tpl_row in df_map.itertuples():
+                    
+#                    progDialog.setValue(k)
+#                    k+=1
                     
                     tpl_left = (tpl_row.lfbank_x, tpl_row.lfbank_y)
                     tpl_right = (tpl_row.rtbank_x, tpl_row.rtbank_y)            
@@ -1582,6 +1620,7 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
                     bankpts.write({'geometry': rt_pt, 'properties':prop})
                     
 #                sys.exit() # for testing
+            progDialog.close()
    
 # ===================================================================================
 #  Read an existing Xn file, calculate xy bounds for each linkno and read the DEM
@@ -1593,7 +1632,7 @@ def get_stats(group):
 #def transform(row):
 #    return row['a']
     
-def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):    
+def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):    
     
     print('Reading and interpolating elevation along Xn\'s...')
     
@@ -1603,9 +1642,17 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
     lst_x2=[]
     lst_y2=[]
 
-    start_time = timeit.default_timer()
+#    start_time = timeit.default_timer()
     # First get all linknos...
     with fiona.open(np.str(str_xns_path), 'r') as xn_shp: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+    
+        # =========== Progress Dialog ================
+        progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(xn_shp), self)
+        progDialog.setGeometry(200, 80, 300, 20)
+        progDialog.setWindowTitle('Exracting elevation along Xn\'s')
+        progDialog.setWindowModality(QtCore.Qt.WindowModal)
+        progDialog.show()
+        # ============================================
          
         # Read each feature line...
         for line in xn_shp:
@@ -1630,7 +1677,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
         gp_coords = df_coords.groupby('linkno')
         
         lst_all_zi=[]
-#        i=0
+        j=0
         
         for linkno, df_linkno in gp_coords:
             
@@ -1646,6 +1693,9 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
                         
             # NOW loop over each Xn...                                   
             for tpl_xn in df_linkno.itertuples():
+                
+                progDialog.setValue(j)
+                j+=1    
                 
                 xn_len = int(np.hypot(tpl_xn.col2-tpl_xn.col1, tpl_xn.row2-tpl_xn.row1))
                 
@@ -1672,8 +1722,10 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
                 lst_all_zi.append(tpl_out)
 #                i += 1
                 
+    progDialog.close()
+           
 #    print('\tTotal Xn\'s:  {}'.format(i))    
-    print('\tTime interpolating elevation along Xn\'s:  ' + str(timeit.default_timer() - start_time))
+#    print('\tTime interpolating elevation along Xn\'s:  ' + str(timeit.default_timer() - start_time))
 
     return pd.DataFrame(lst_all_zi, columns=['linkno','elev','xn_row','xn_col'])
     
@@ -1689,11 +1741,15 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         Output: list of tuples of lists describing the Xn's along a reach (row, col)
         
     """
-    j=0
+    j=0   
+    
+    # =========== Progress Dialog ================
     progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(df_coords.index), self)
-    progDialog.setGeometry(200, 80, 250, 20)
-    progDialog.setWindowTitle('Build stream coordinates')
-    progDialog.show()      
+    progDialog.setGeometry(200, 80, 300, 20)
+    progDialog.setWindowTitle('Writing Cross Sections')
+    progDialog.setWindowModality(QtCore.Qt.WindowModal)
+    progDialog.show()
+    # ============================================    
     
     slopeCutoffVertical = 20 # just a threshold determining when to call a Xn vertical (if it's above this, make it vertical. Otherwise things get whacky?)
 
@@ -1840,10 +1896,13 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
         streamlines_crs = streamlines.crs  
 #        str_proj4 = crs.to_string(streamlines.crs)         
         
+        # =========== Progress Dialog ================
         progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(streamlines), self)
-        progDialog.setGeometry(200, 80, 250, 20)
-        progDialog.setWindowTitle('Build stream coordinates')
+        progDialog.setGeometry(200, 80, 300, 20)
+        progDialog.setWindowTitle('Building stream coordinates')
+        progDialog.setWindowModality(QtCore.Qt.WindowModal)
         progDialog.show()
+        # ============================================
         
         for line in streamlines:
             

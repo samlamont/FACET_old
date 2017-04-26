@@ -197,31 +197,31 @@ class facet(QtGui.QDialog):
             # Build and write the Xn shapefile...
             funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(self.textXns.text()), False, int(self.textXnSpacing.text()), int(self.textFitLength.text()), float(self.textXnLength.text()), self)     
         
-        # << Calculate Channel Metrics -- Bank Points Method >>
+        # << Calculate Channel Metrics -- Xns Method >>
         if self.chkMetricsXns.isChecked():
 
             # Read the cross section shapefile and interplote elevation along each one using the specified DEM
-            df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(self.xnsPath.text(), self.demPath_bankpts.text())
+            df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(self.textXns.text(), self.textDEM_xns.text(), self)
             
             XnPtDist = self.cell_size
             
             # Calculate channel metrics and write bank point shapefile...# parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh
-            funcs_v2.chanmetrics_bankpts(df_xn_elev, str(self.xnsPath.text()), str(self.demPath_bankpts.text()), str(self.bankptsPath.text()), float(self.p_ivert.text()), XnPtDist, float(self.p_ratiothresh.text()), float(self.p_slpthresh.text()))
+            funcs_v2.chanmetrics_bankpts(df_xn_elev, str(self.textXns.text()), str(self.textDEM_xns.text()), str(self.textBankPts.text()), float(self.textVertIncrement.text()), XnPtDist, float(self.textRatioThresh.text()), float(self.textSlpThresh.text()), self)
                    
         # << Create bank pixel layer (.tif) >>
         if self.chkBankPixels.isChecked():
              
             print('Reading streamline coordinates...') 
-            df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.streamsPath_bankpixels.text(), self.cell_size, str(self.reachid_bankpixels.currentText()))
+            df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_curvature.text(), self.cell_size, str(self.comboBoxCurvature.currentText()))
             
             print('Creating bank pixel layer...') 
-            funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.demPath_bankpixels.text()), str(self.bankpixelsPath.text()))
+            funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.textDEM_curvature.text()), str(self.textBankPixels.text()))
             
         # << Calculate Channel Metrics -- Bank Pixels Method >>
         if self.chkPixelMetrics.isChecked():
             print('Calculating channel width from bank pixel layer!')
             # def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reachid):                        
-            funcs_v2.channel_width_bankpixels(self.streamsPath_bankpixels.text(), self.bankpixelsPath.text(), self.reachid_bankpixels.currentText(), self.cell_size)
+            funcs_v2.channel_width_bankpixels(self.textStreams_curvature.text(), self.textBankPixels.text(), self.comboBoxCurvature .currentText(), self.cell_size)
         
 #        # << Calculate Floodplain >>
 #        if self.ck_fp.isChecked():
@@ -355,7 +355,6 @@ if __name__ == '__main__':
     # ===== Run GUI ==============================
     app = QtGui.QApplication(sys.argv)
 
-#    mainform = MainForm()
     mainform = facet()
     
     # Show it in the center of the window...
