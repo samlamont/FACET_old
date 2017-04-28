@@ -102,6 +102,8 @@ def get_feature_count(str_shp_path):
 # =============================================================================== 
 def channel_width_bankpixels_segments(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size):
     
+    print('Channel width from bank pixels -- segmented...')
+    
 #    lst_output=[]
     
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
@@ -132,7 +134,7 @@ def channel_width_bankpixels_segments(df_coords, str_streamlines_path, str_bankp
             
                     i_linkno = int(i_linkno)
                     
-                    print('linkno:  {}'.format(i_linkno))
+#                    print('linkno:  {}'.format(i_linkno))
           
                     # Now loop over df_linkno
                     # Set up index array for looping...
@@ -216,28 +218,33 @@ def channel_width_bankpixels_segments(df_coords, str_streamlines_path, str_bankp
 #    # Write to a csv...
 #    pd_output = pd.DataFrame(lst_output)    
 #    pd_output.to_csv('/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/channel_width_test.csv')
-    
-    
+     
     return
     
 # ===============================================================================
 #  Calculate channel width based on bank pixels and stream line buffers, 
 #  potentially subdividing using Xn's
 # =============================================================================== 
-def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reachid, cell_size):
+def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, progBar):
     
 #    lst_output=[]
+    print('Channel width from bank pixels...')
     
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
     head, tail = os.path.split(str_streamlines_path)    
     str_outname = tail[:-4] + '_chwidth.shp'
     str_outpath = head + '/' + str_outname 
     
+    j=0   
+    progBar.setVisible(True)    
+    
     # Open the bankpts layer...
     with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:
         
         # Open the streamlines layer...
         with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+       
+            progBar.setRange(0, len(streamlines))        
        
             # Get the crs...
             streamlines_crs = streamlines.crs                
@@ -249,13 +256,15 @@ def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reac
           
                 for line in streamlines:    
                     
-    #                lst_pixel_count=[]
+                    progBar.setValue(j)
+                    j+=1
+                    
                     lst_tally=[]
                     
                     # Buffer each feature...
                     geom = shape(line['geometry'])   # Convert to shapely geometry to operate on it
                                     
-                    print('linkno: {}'.format(line['properties'][str_reachid]))
+#                    print('linkno: {}'.format(line['properties'][str_reachid]))
                     
 #                    if line['properties'][str_reachid] <> 7:
 #                        continue
@@ -942,7 +951,9 @@ def fp_from_streamline_window(df_coords, str_dem_path, str_fp_path):
 # ===============================================================================
 #  Searchable window with center pixel defined by get_stream_coords_from_features
 # ===============================================================================  
-def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_path):
+def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_path, progBar):
+    
+    print('Bank pixels from streamline windows...')
     
     # Convert df_coords x-y to row-col via DEM affine
     # Loop over center row-col pairs accessing the window
@@ -956,6 +967,9 @@ def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_pa
 #    lst_y1=[]
 #    lst_x2=[]
 #    lst_y2=[]    
+    
+    j=0   
+    progBar.setVisible(True)   
     
     with rasterio.open(str_dem_path) as ds_dem:
         
@@ -975,11 +989,14 @@ def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_pa
         arr_bankpts=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
 #        arr_bankpts=out_meta['nodata']
         
-#        lst_dist=[]
+        progBar.setRange(0, len(df_coords.index)) 
         
         for tpl_row in df_coords.itertuples():
             
-            print(tpl_row.linkno)
+            progBar.setValue(j)
+            j+=1
+            
+#            print(tpl_row.linkno)
             
             row_min = np.int(tpl_row.row - np.int(w_height/2))
             row_max = np.int(tpl_row.row + np.int(w_height/2))
@@ -1517,13 +1534,9 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
 #  Calculate channel metrics based on the bankpoint slope-threshold method at each Xn,
 #   writing the bank points to a shapefile 
 # ====================================================================================
-def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh, self):
-    
-#    # analyze_xnelev parameters...
-#    parm_ivert=0.2
-#    XnPtDist = 3 #? 
-#    parm_ratiothresh = 1.5
-#    parm_slpthresh = 0.03    
+def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh, progBar): 
+       
+    print('Channel metrics from bank points...')    
     
     # << BEGIN LOOP >>
     # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
@@ -1531,15 +1544,10 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
     # Striding...
     arr_strides = np.linspace(0, xn_count, xn_count/100)
     arr_strides = np.delete(arr_strides,0)  
-    
-    # =========== Progress Dialog ================
-    progDialog = QtGui.QProgressDialog("", "Cancel", 0, arr_strides.size, self)
-    progDialog.setGeometry(200, 80, 300, 20)
-    progDialog.setWindowTitle('Calculating metrics from Xn\'s...')
-    progDialog.setWindowModality(QtCore.Qt.WindowModal)
-    progDialog.show()
-    # ============================================    
 
+    progBar.setVisible(True)
+    progBar.setRange(0, arr_strides.size)
+        
     # Now loop over the linknos to get access grid by window...
     with rasterio.open(str_demPath) as ds_dem:
         
@@ -1557,10 +1565,10 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
             j=0
             for indx in arr_strides:
                 
-                progDialog.setValue(k)
+                progBar.setValue(k)
                 k+=1
                 
-                print('\tIndex {} - {}/{}'.format(j,int(indx),xn_count))        
+#                print('\tIndex {} - {}/{}'.format(j,int(indx),xn_count))        
                 df_xn_elev_n = df_xn_elev.iloc[j:int(indx)]
                 j = int(indx)+1        
               
@@ -1574,9 +1582,7 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
                 df_bank_metrics.set_index('xn_no', inplace=True)
                 
                 df_map = pd.merge(df_xn_elev, df_bank_metrics, left_index=True, right_index=True) 
-                
-                progDialog.setRange(0, len(df_map.index))
-                
+
                 lst_lfbank_row=[]
                 lst_lfbank_col=[]
                 lst_rtbank_row=[]
@@ -1620,7 +1626,6 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
                     bankpts.write({'geometry': rt_pt, 'properties':prop})
                     
 #                sys.exit() # for testing
-            progDialog.close()
    
 # ===================================================================================
 #  Read an existing Xn file, calculate xy bounds for each linkno and read the DEM
@@ -1632,7 +1637,7 @@ def get_stats(group):
 #def transform(row):
 #    return row['a']
     
-def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):    
+def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, progBar):    
     
     print('Reading and interpolating elevation along Xn\'s...')
     
@@ -1645,14 +1650,10 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):
 #    start_time = timeit.default_timer()
     # First get all linknos...
     with fiona.open(np.str(str_xns_path), 'r') as xn_shp: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
-    
-        # =========== Progress Dialog ================
-        progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(xn_shp), self)
-        progDialog.setGeometry(200, 80, 300, 20)
-        progDialog.setWindowTitle('Exracting elevation along Xn\'s')
-        progDialog.setWindowModality(QtCore.Qt.WindowModal)
-        progDialog.show()
-        # ============================================
+
+        j=0   
+        progBar.setVisible(True)
+        progBar.setRange(0, len(xn_shp))
          
         # Read each feature line...
         for line in xn_shp:
@@ -1681,7 +1682,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):
         
         for linkno, df_linkno in gp_coords:
             
-            print(linkno)
+#            print(linkno)
             
             row_min = df_linkno[['row1','row2']].min(axis=0).min()
             row_max = df_linkno[['row1','row2']].max(axis=0).max()
@@ -1694,7 +1695,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):
             # NOW loop over each Xn...                                   
             for tpl_xn in df_linkno.itertuples():
                 
-                progDialog.setValue(j)
+                progBar.setValue(j)
                 j+=1    
                 
                 xn_len = int(np.hypot(tpl_xn.col2-tpl_xn.col1, tpl_xn.row2-tpl_xn.row1))
@@ -1716,13 +1717,10 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):
                 for i, xnrow in enumerate(lst_xnrow):
                     lst_xnrow[i] = lst_xnrow[i] + row_min
                     lst_xncol[i] = lst_xncol[i] + col_min
-#                
-#                break
+
                 tpl_out = (linkno, arr_zi, lst_xnrow, lst_xncol)
                 lst_all_zi.append(tpl_out)
 #                i += 1
-                
-    progDialog.close()
            
 #    print('\tTotal Xn\'s:  {}'.format(i))    
 #    print('\tTime interpolating elevation along Xn\'s:  ' + str(timeit.default_timer() - start_time))
@@ -1732,7 +1730,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path, self):
 # ===================================================================================
 #  Build the Xns for all reaches and write to shapefile
 # ===================================================================================
-def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xngap, p_fitlength, p_xnlength, self):
+def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xngap, p_fitlength, p_xnlength, progBar):
     """
         Builds Xns from x-y pairs representing shapely interpolations along a reach
 
@@ -1742,14 +1740,8 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         
     """
     j=0   
-    
-    # =========== Progress Dialog ================
-    progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(df_coords.index), self)
-    progDialog.setGeometry(200, 80, 300, 20)
-    progDialog.setWindowTitle('Writing Cross Sections')
-    progDialog.setWindowModality(QtCore.Qt.WindowModal)
-    progDialog.show()
-    # ============================================    
+    progBar.setVisible(True)
+    progBar.setRange(0, pd.unique(df_coords['linkno']).size) # need length on unique linkno values
     
     slopeCutoffVertical = 20 # just a threshold determining when to call a Xn vertical (if it's above this, make it vertical. Otherwise things get whacky?)
 
@@ -1770,7 +1762,10 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         for i_linkno, df_linkno in gp_coords:
             
             i_linkno = int(i_linkno)
-            
+
+            progBar.setValue(j)
+            j+=1 
+                
             # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
             i_order = df_linkno.order.iloc[0]
             if i_order == 1:
@@ -1791,10 +1786,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                 continue # skip it for now
         
             # Loop along the reach at the specified intervals...(Xn loop)
-            for i in range( p_xngap, reach_len-p_xngap, p_xngap ):
-                
-                progDialog.setValue(j)
-                j+=1                
+            for i in range( p_xngap, reach_len-p_xngap, p_xngap ):                
         
                 lstThisSegmentRows = []
                 lstThisSegmentCols = []
@@ -1862,57 +1854,44 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                 
 #                if XnCntr > 10:
 #                    break
-
-        progDialog.close()
         
     return lst_xnrowcols
     
 # ===================================================================================
 #  Build Xn's based on vector features
 # ===================================================================================
-def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid, str_orderid, self):
+def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid, str_orderid, progBar):
         
-#    lst_verts=[]    # to contain the x-y vertex pairs (list of lists)
-#    lst_linknos=[]
-#    lst_intpts=[]
     lst_x=[]
     lst_y=[]
     lst_linkno=[]
     lst_order=[]
+    
+    print('Getting stream coords from features...')
        
-#    # TESTESTSETSETESTESTSETSETSETETEST 
-#    with rasterio.open('/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEM_02050205_USGS_AEA.tif') as ds_dem:
-#
-#        test = ds_dem.crs    
-
-#    from fiona import crs
-        
+    progBar.setVisible(True)
+ 
     p_interp_spacing = cell_size #3 # larger numbers would simulate a more smoothed reach | NOTE: Hardcode this = grid resolution?
-    j=0
+    j=0 # prog bar
+    
     # Open the streamlines shapefile...
     with fiona.open(str(str_streams_filepath), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
    
         # Get the crs...
         streamlines_crs = streamlines.crs  
 #        str_proj4 = crs.to_string(streamlines.crs)         
-        
-        # =========== Progress Dialog ================
-        progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(streamlines), self)
-        progDialog.setGeometry(200, 80, 300, 20)
-        progDialog.setWindowTitle('Building stream coordinates')
-        progDialog.setWindowModality(QtCore.Qt.WindowModal)
-        progDialog.show()
-        # ============================================
+
+        progBar.setRange(0,len(streamlines))
         
         for line in streamlines:
             
-           progDialog.setValue(j)
+           progBar.setValue(j)
            
            j+=1
            i_linkno = line['properties'][str_reachid]           
            i_order = line['properties'][str_orderid]
            
-           print('{} | {}'.format(i_linkno, j))
+#           print('{} | {}'.format(i_linkno, j))
            
            line_shply = LineString(line['geometry']['coordinates'])
            
@@ -1941,7 +1920,7 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
                
         df_coords.drop_duplicates(['x','y'], inplace=True) # duplicates due to interpolation (?)
         
-        progDialog.close()
+#        progDialog.close()
         
     return df_coords, streamlines_crs # A list of lists      
     

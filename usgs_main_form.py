@@ -35,11 +35,13 @@ import funcs_v2
 # ===================================================================================
 #                                       MAIN
 # ===================================================================================
-class facet(QtGui.QDialog):
+class facet(QtGui.QMainWindow):
+#class facet(QtGui.QDialog):
 #class facet(QtGui.QTabWidget):
 #class MainForm(QtGui.QDialog, FORM_CLASS):
     
-    def __init__(self, parent=None):        
+    def __init__(self, parent=None):   
+        
         super(facet, self).__init__(parent)
         
         # ================= UI ================
@@ -68,9 +70,8 @@ class facet(QtGui.QDialog):
         self.textSlpThresh.setText('0.03')        
         
         # << Progress Bar >>
-#        self.progressBar.setVisible(False)
-#        self.progressBar.setTextVisible(False)
-        
+        self.progressBar.setVisible(False)
+#        self.progressBar.setTextVisible(False)        
         # =====================================
         
     # =========================================    
@@ -169,12 +170,11 @@ class facet(QtGui.QDialog):
     # =========================================
     def run_main(self):        
         
-#        self.progDialog = QtGui.QProgressDialog("", "Cancel", 0, len(self.rename_list), self)
+        # Gray out the tabs...   
+        self.tabWidget.setEnabled(False)               
                
         start_time_0 = timeit.default_timer()
-#        self.close() # keep open to display progress bar?
-#        self.show()
-        
+       
 #         Check which tab is active??
 #        i_tab = self.tab_widget.currentIndex() # (0: bankpts; 1: bankpixels; 2: FP-HAND)
 #        print('selected tab:  {}'.format(i_tab))
@@ -185,44 +185,49 @@ class facet(QtGui.QDialog):
 #            sys.exit()
             
         str_orderid='Order_'
-            
-        # << Generate Cross Sections >>
-        if self.chkCreateXns.isChecked():
-            
-#            print('here')
-                   
-            # Build reach coords and get crs from a pre-existing streamline shapefile...
-            df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_Xns.text(), self.cell_size, str(self.comboBoxXns.currentText()), str_orderid, self)
-
-            # Build and write the Xn shapefile...
-            funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(self.textXns.text()), False, int(self.textXnSpacing.text()), int(self.textFitLength.text()), float(self.textXnLength.text()), self)     
         
-        # << Calculate Channel Metrics -- Xns Method >>
-        if self.chkMetricsXns.isChecked():
-
-            # Read the cross section shapefile and interplote elevation along each one using the specified DEM
-            df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(self.textXns.text(), self.textDEM_xns.text(), self)
+        try:
             
-            XnPtDist = self.cell_size
+            # << Generate Cross Sections >>
+            if self.chkCreateXns.isChecked():
+    
+                self.lblProgBar.setText('Building stream coordinates...')
+                # Build reach coords and get crs from a pre-existing streamline shapefile...
+                df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_Xns.text(), self.cell_size, str(self.comboBoxXns.currentText()), str_orderid, self.progressBar)
+    
+                self.lblProgBar.setText('Generating cross sections...')
+                # Build and write the Xn shapefile...
+                funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(self.textXns.text()), False, int(self.textXnSpacing.text()), int(self.textFitLength.text()), float(self.textXnLength.text()), self.progressBar)     
             
-            # Calculate channel metrics and write bank point shapefile...# parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh
-            funcs_v2.chanmetrics_bankpts(df_xn_elev, str(self.textXns.text()), str(self.textDEM_xns.text()), str(self.textBankPts.text()), float(self.textVertIncrement.text()), XnPtDist, float(self.textRatioThresh.text()), float(self.textSlpThresh.text()), self)
-                   
-        # << Create bank pixel layer (.tif) >>
-        if self.chkBankPixels.isChecked():
-             
-            print('Reading streamline coordinates...') 
-            df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_curvature.text(), self.cell_size, str(self.comboBoxCurvature.currentText()))
+            # << Calculate Channel Metrics -- Xns Method >>
+            if self.chkMetricsXns.isChecked():
+    
+                self.lblProgBar.setText('Extracting elevation along cross sections...')
+                # Read the cross section shapefile and interplote elevation along each one using the specified DEM
+                df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(self.textXns.text(), self.textDEM_xns.text(), self.progressBar)
+                
+                XnPtDist = self.cell_size
+                
+                self.lblProgBar.setText('Calculating channel metrics...')
+                # Calculate channel metrics and write bank point shapefile...# parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh
+                funcs_v2.chanmetrics_bankpts(df_xn_elev, str(self.textXns.text()), str(self.textDEM_xns.text()), str(self.textBankPts.text()), float(self.textVertIncrement.text()), XnPtDist, float(self.textRatioThresh.text()), float(self.textSlpThresh.text()), self.progressBar)
+                       
+            # << Create bank pixel layer (.tif) >>
+            if self.chkBankPixels.isChecked():
+                 
+                self.lblProgBar.setText('Reading streamline coordinates...') 
+                df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_curvature.text(), self.cell_size, str(self.comboBoxCurvature.currentText()), self.progressBar)
+                
+                self.lblProgBar.setText('Creating bank pixel layer...') 
+                funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.textDEM_curvature.text()), str(self.textBankPixels.text()), self.progressBar)
+                
+            # << Calculate Channel Metrics -- Bank Pixels Method >>
+            if self.chkPixelMetrics.isChecked():
+                
+                self.lblProgBar.setText('Calculating channel width from bank pixel layer!')
+                funcs_v2.channel_width_bankpixels(self.textStreams_curvature.text(), self.textBankPixels.text(), self.comboBoxCurvature .currentText(), self.cell_size, self.progressBar)
+        except:
             
-            print('Creating bank pixel layer...') 
-            funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.textDEM_curvature.text()), str(self.textBankPixels.text()))
-            
-        # << Calculate Channel Metrics -- Bank Pixels Method >>
-        if self.chkPixelMetrics.isChecked():
-            print('Calculating channel width from bank pixel layer!')
-            # def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reachid):                        
-            funcs_v2.channel_width_bankpixels(self.textStreams_curvature.text(), self.textBankPixels.text(), self.comboBoxCurvature .currentText(), self.cell_size)
-        
 #        # << Calculate Floodplain >>
 #        if self.ck_fp.isChecked():
 #            print('Create floodplain here!')
@@ -236,10 +241,14 @@ class facet(QtGui.QDialog):
             
         print('Done with main!')
                 
+        self.tabWidget.setEnabled(True) 
+#        self.close()
+        
         # Show message when complete...
         # '\tTotal time:  ' + str(timeit.default_timer() - start_time_0
-        QtGui.QMessageBox.information(self, 'Code Complete', 'Successful Run! \n\n\t   {0:.2f} secs'.format(timeit.default_timer() - start_time_0))
-                 
+#        QtGui.QMessageBox.information(self, 'Code Complete', 'Successful Run! \n\n\t   {0:.2f} secs'.format(timeit.default_timer() - start_time_0))
+        self.lblProgBar.setText('Done!                  Elasped Time:  {0:.2f} secs'.format(timeit.default_timer() - start_time_0))
+        
 if __name__ == '__main__':    
     
 ###    # ============================ << FOR DEBUGGING >> ==================================
