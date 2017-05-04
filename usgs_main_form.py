@@ -4,9 +4,9 @@ Created on Tue Dec  6 16:11:00 2016
 
 @author: sam.lamont
 """
-
+#import time
 import timeit
-from PyQt4 import QtGui, uic
+from PyQt4 import QtCore, QtGui, uic
 import sys
 #import numpy as np
 #from numpy import array
@@ -21,17 +21,42 @@ import fiona
 #from fiona.crs import to_string
 #from math import isinf, sqrt #, hypot, modf, atan, ceil
 #import matplotlib.pyplot as plt
-#import pandas as pd
+import pandas as pd
 
-import funcs_v2
+import funcs_v2 
+#from funcs_v2 import workerfuncs
+
+# OR from funcs_v2 import <<ClassName>>
 
 #from shapely import speedups
 #
 #if speedups.available:
 #    speedups.enable() # enable performance enhancements written in C
 
-#plt.ion()  
+#plt.ion() 
 
+#class ResultObj(QtCore.QObject):
+#    def __init__(self, val):
+#        self.val = val 
+#
+#class GenericThread(QtCore.QThread):
+#    finished = QtCore.pyqtSignal(object)
+#  
+#    def __init__(self, function, *args):
+#        QtCore.QThread.__init__(self)
+#        self.function = function
+#        self.args = args
+##        self.kwargs = kwargs
+#        self.finished.connect(function)
+#     
+#    def __del__(self):
+#        self.wait()
+#     
+#    def run(self):
+##        self.function(*self.args) #,**self.kwargs)
+#        self.finished.emit(ResultObj(self.function(*self.args)))
+##        return
+  
 # ===================================================================================
 #                                       MAIN
 # ===================================================================================
@@ -46,7 +71,7 @@ class facet(QtGui.QMainWindow):
         
         # ================= UI ================
         uic.loadUi('facet.ui', self)  
-        
+              
         # << Browse buttons >>
         self.browseDEM_Xns.clicked.connect(self.get_dem_file)             # DEM - Xns
         self.browseStreams_Xns.clicked.connect(self.get_streams_file)     # Streams - Xns
@@ -56,11 +81,14 @@ class facet(QtGui.QMainWindow):
         self.browseStreams_Curve.clicked.connect(self.get_streams_file)   # Streams - curvature
         self.browseBankPixels.clicked.connect(self.get_or_set_bankpixels) # Bank Pixels      
         
-        # << Button box >>
-        self.buttonBox.accepted.connect(self.run_main)        
-        self.buttonBox.rejected.connect(self.close)
-#        self.pushButton.clicked.connect(self.run_main)
+#        self.connect( self, QtCore.SIGNAL("add(QString)"), self.run_main )
+#        self.genThread = GenericThread(self.run_main)        
         
+        # << Button box >>      
+#        self.buttonBox.accepted.connect(self.genThread.start) 
+        self.buttonBox.accepted.connect(self.run_main)        # run_main in a thread?
+        self.buttonBox.rejected.connect(self.close)
+                     
         # << Defaults >>
         self.textFitLength.setText('3')
         self.textXnSpacing.setText('3')
@@ -158,96 +186,125 @@ class facet(QtGui.QMainWindow):
             self.textXns.setText(fname)  
         
     def get_or_set_bankpixels(self):
-        if self.chkPixelMetrics.isChecked():
-            fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Grids (*.*)')
+        if self.chkBankPixels.isChecked():
+            fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Grids (*.*)')
             self.textBankPixels.setText(fname)   
         else:
-            fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Grids (*.*)')
+            fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Grids (*.*)')
             self.textBankPixels.setText(fname)             
     
     # =========================================    
     #              << RUN MAIN >>    
-    # =========================================
+    # =========================================     
     def run_main(self):        
-        
+
         # Gray out the tabs...   
-        self.tabWidget.setEnabled(False)               
-               
+#        self.tabWidget.setEnabled(False) 
+        self.hide()                             
         start_time_0 = timeit.default_timer()
+        
+        str_orderid='Order_' # TESTING
        
 #         Check which tab is active??
 #        i_tab = self.tab_widget.currentIndex() # (0: bankpts; 1: bankpixels; 2: FP-HAND)
 #        print('selected tab:  {}'.format(i_tab))
-        
-        # Check coordinate systems (DEM vs. Streamlines)...
-        if dict(self.dem_crs) <> dict(self.streamlines_crs):
-            QtGui.QMessageBox.critical(self, 'Warning!', 'Coordinate Systems of DEM and Streams Layer May Not Match')
-#            sys.exit()
-            
-        str_orderid='Order_'
-        
-        try:
-            
+              
+        try:            
+            # Check coordinate systems (DEM vs. Streamlines)...
+            if dict(self.dem_crs) <> dict(self.streamlines_crs):
+                QtGui.QMessageBox.critical(self, 'Warning!', 'Coordinate Systems of DEM and Streams Layer May Not Match')                            
+
+            # Build reach coords and get crs from a pre-existing streamline shapefile...
+            funcs = funcs_v2.workerfuncs()
+                
             # << Generate Cross Sections >>
             if self.chkCreateXns.isChecked():
+                
+#                str_streams=self.textStreams_Xns.text()
+#                cell_size = self.cell_size
+#                str_streamid = str(self.comboBoxXns.currentText())
+#                
+#                self.lblProgBar.setText('Building stream coordinates...') 
+#                self.genThread = GenericThread(funcs_v2.get_stream_coords_from_features, str_streams, cell_size, str_streamid, str_orderid)
+#                
+#                self.connect(self.genThread, QtCore.SIGNAL("finished()"), self.done)
+#
+#                self.genThread.start()
+                
+                # Need to wait here
+                
+#                self.lblProgBar.setText('Building stream coordinates...')               
+
+                
+#                QtCore.QObject.connect(func,QtCore.SIGNAL("update(int)"), self.updateUI)                
+                df_coords, streamlines_crs = funcs_v2.workerfuncs.get_stream_coords_from_features(funcs, self.textStreams_Xns.text(), self.cell_size, str(self.comboBoxXns.currentText()), str_orderid)
     
-                self.lblProgBar.setText('Building stream coordinates...')
-                # Build reach coords and get crs from a pre-existing streamline shapefile...
-                df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_Xns.text(), self.cell_size, str(self.comboBoxXns.currentText()), str_orderid, self.progressBar)
-    
-                self.lblProgBar.setText('Generating cross sections...')
-                # Build and write the Xn shapefile...
-                funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(self.textXns.text()), False, int(self.textXnSpacing.text()), int(self.textFitLength.text()), float(self.textXnLength.text()), self.progressBar)     
-            
+#                self.lblProgBar.setText('Generating cross sections...')
+#                # Build and write the Xn shapefile...
+                funcs_v2.workerfuncs.write_xns_shp(funcs, df_coords, streamlines_crs, str(self.textXns.text()), False, int(self.textXnSpacing.text()), int(self.textFitLength.text()), float(self.textXnLength.text()))     
+#            
+#                self.genThread.terminate() # stop thread
+                
             # << Calculate Channel Metrics -- Xns Method >>
             if self.chkMetricsXns.isChecked():
     
-                self.lblProgBar.setText('Extracting elevation along cross sections...')
+#                self.lblProgBar.setText('Extracting elevation along cross sections...')
                 # Read the cross section shapefile and interplote elevation along each one using the specified DEM
-                df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(self.textXns.text(), self.textDEM_xns.text(), self.progressBar)
+                df_xn_elev = funcs_v2.workerfuncs.read_xns_shp_and_get_dem_window(funcs, self.textXns.text(), self.textDEM_xns.text())
                 
                 XnPtDist = self.cell_size
                 
-                self.lblProgBar.setText('Calculating channel metrics...')
+#                self.lblProgBar.setText('Calculating channel metrics...')
                 # Calculate channel metrics and write bank point shapefile...# parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh
-                funcs_v2.chanmetrics_bankpts(df_xn_elev, str(self.textXns.text()), str(self.textDEM_xns.text()), str(self.textBankPts.text()), float(self.textVertIncrement.text()), XnPtDist, float(self.textRatioThresh.text()), float(self.textSlpThresh.text()), self.progressBar)
+                funcs_v2.workerfuncs.chanmetrics_bankpts(funcs, df_xn_elev, str(self.textXns.text()), str(self.textDEM_xns.text()), str(self.textBankPts.text()), float(self.textVertIncrement.text()), XnPtDist, float(self.textRatioThresh.text()), float(self.textSlpThresh.text()))
                        
             # << Create bank pixel layer (.tif) >>
             if self.chkBankPixels.isChecked():
                  
                 self.lblProgBar.setText('Reading streamline coordinates...') 
-                df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_curvature.text(), self.cell_size, str(self.comboBoxCurvature.currentText()), self.progressBar)
+                df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(self.textStreams_curvature.text(), self.cell_size, str(self.comboBoxCurvature.currentText()), str_orderid, self)
                 
                 self.lblProgBar.setText('Creating bank pixel layer...') 
-                funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.textDEM_curvature.text()), str(self.textBankPixels.text()), self.progressBar)
+                funcs_v2.bankpixels_from_streamline_window(df_coords, str(self.textDEM_curvature.text()), str(self.textBankPixels.text()), self)
                 
             # << Calculate Channel Metrics -- Bank Pixels Method >>
             if self.chkPixelMetrics.isChecked():
                 
                 self.lblProgBar.setText('Calculating channel width from bank pixel layer!')
-                funcs_v2.channel_width_bankpixels(self.textStreams_curvature.text(), self.textBankPixels.text(), self.comboBoxCurvature .currentText(), self.cell_size, self.progressBar)
-        except:
+                funcs_v2.channel_width_bankpixels(self.textStreams_curvature.text(), self.textBankPixels.text(), self.comboBoxCurvature .currentText(), self.cell_size, self)
+                
+    #        # << Calculate Floodplain >>
+    #        if self.ck_fp.isChecked():
+    #            print('Create floodplain here!')
+                
+    #        # << Run All Functions >>
+    #        if self.ck_runall_bankpts.isChecked():
+    #            print('Run all is currently disabled')
+    #
+    #        if self.ck_runall_pixels.isChecked():
+    #            print('Run all is currently disabled')
+                
+            print('Done with main!')
+#            self.lblProgBar.setText('Done!                                Elasped Time:  {0:.2f} mins'.format(float(timeit.default_timer() - start_time_0))/60.)
             
-#        # << Calculate Floodplain >>
-#        if self.ck_fp.isChecked():
-#            print('Create floodplain here!')
-            
-#        # << Run All Functions >>
-#        if self.ck_runall_bankpts.isChecked():
-#            print('Run all is currently disabled')
-#
-#        if self.ck_runall_pixels.isChecked():
-#            print('Run all is currently disabled')
-            
-        print('Done with main!')
+        except BaseException as e:
+            QtGui.QMessageBox.critical(self, 'Error!', '{}'.format(str(e)))
                 
         self.tabWidget.setEnabled(True) 
 #        self.close()
         
+#        self.emit( QtCore.SIGNAL('add(QString)'), 'run_main complete')
+        
         # Show message when complete...
         # '\tTotal time:  ' + str(timeit.default_timer() - start_time_0
-#        QtGui.QMessageBox.information(self, 'Code Complete', 'Successful Run! \n\n\t   {0:.2f} secs'.format(timeit.default_timer() - start_time_0))
-        self.lblProgBar.setText('Done!                  Elasped Time:  {0:.2f} secs'.format(timeit.default_timer() - start_time_0))
+#        QtGui.QMessageBox.information(self, 'Code Complete', 'Successful Run! \n\n\t   {0:.2f} secs'.format(timeit.default_timer() - start_time_0))       
+
+#    def done(self):
+#        QtGui.QMessageBox.information(self, "Done!", "Done whatevah!")
+
+ 
+#    def updateUI(self, val):
+#        self.progressBar.setValue(val)   
         
 if __name__ == '__main__':    
     
@@ -280,7 +337,7 @@ if __name__ == '__main__':
 ##    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_bankpoints.shp'
 ###    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/02050205_bankpoints_USGS_AEA.shp'
 ##    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/020700_bankpts.shp'
-#    str_bankpts_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpts.shp'
+#    str_bankpts_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpts_TEST.shp'
 # 
 #    ## << FLOODPLAIN >>
 #    str_fp_path = '/home/sam.lamont/USGSChannelFPMetrics/testing/fp_pixels.tif'
@@ -289,7 +346,7 @@ if __name__ == '__main__':
 ##    str_xns_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/02050205_xns_USGS_AEA_2.shp'
 ##    str_xns_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_net_xnptdist1.shp'
 ##    str_xns_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/020700_xns.shp'
-#    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\chan_xns.shp'
+#    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\chan_xns_TEST.shp'
 #
 #    ## << HAND >>    
 #    str_hand_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_hand.tif'
@@ -321,6 +378,7 @@ if __name__ == '__main__':
 #    
 #    print('Reading pre-calculated csv file...')
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )    
+#    streamlines_crs = {'init': u'epsg:26918'}
 ##   
 ##        << Find bank pixels using moving window along streamline >>
 ##    funcs_v2.bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_path) 
@@ -328,10 +386,8 @@ if __name__ == '__main__':
 ###    # << Channel Width via Bank Points >>    
 ###    buff_dist = 10.0
 ##    funcs_v2.channel_width_bankpixels(str_net_path, str_bankpixels_path, str_reachid, cell_size)    
-#    funcs_v2.channel_width_bankpixels_segments(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
-##
-#
-##
+##    funcs_v2.channel_width_bankpixels_segments(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
+
 ##      << Find bank pixels using moving window along streamline >>
 ##    funcs_v2.fp_from_streamline_window(df_coords, str_dem_path, str_fp_path)
 ##       
@@ -347,7 +403,7 @@ if __name__ == '__main__':
 ##    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
 #
 ##    # << INTERPOLATE XNs >>
-##    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+#    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
 #    
 ##    print('Writing df_xn_elev to .csv for testing...')
 ##    df_xn_elev.to_csv(columns=['index','linkno','elev','xn_row','xn_col']) 
@@ -355,7 +411,7 @@ if __name__ == '__main__':
 # 
 ##    # Calculate channel metrics and write bank point shapefile...
 ##    print('Calculating channel metrics from bank points...')
-##    funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+#    funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
 # 
 #    print('\n<<< End >>>\r\n')
 #    print('Run time:  {}'.format(timeit.default_timer() - start_time_0))
