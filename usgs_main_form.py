@@ -109,10 +109,10 @@ class facet(QtGui.QMainWindow):
     def get_dem_file(self):
         fname_dem = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Grids (*.*)')
         
-        if self.tabWidget.currentIndex() == 0:        
+        if self.tabWidget.currentIndex() == 1:      # Channel metrics via Xn's        
             self.textDEM_xns.setText(fname_dem)
 
-        if self.tabWidget.currentIndex() == 1:        
+        if self.tabWidget.currentIndex() == 2:      # Channel metrics via Curvature    
             self.textDEM_curvature.setText(fname_dem)
             
 #        if self.tab_widget.currentIndex() == 2:        
@@ -146,7 +146,7 @@ class facet(QtGui.QMainWindow):
     def get_streams_file(self):
         fname_streams = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Shapefiles (*.shp)')
 
-        if self.tabWidget.currentIndex() == 0:        
+        if self.tabWidget.currentIndex() == 1:        
             self.textStreams_Xns.setText(fname_streams) 
             
             # Also load the reach ID combo box here...
@@ -158,7 +158,7 @@ class facet(QtGui.QMainWindow):
                 for name in lst_fieldnames:
                     self.comboBoxXns.addItem(str(name))            
 
-        if self.tabWidget.currentIndex() == 1:        
+        if self.tabWidget.currentIndex() == 2:        
             self.textStreams_curvature.setText(fname_streams) 
         
             # Also load the reach ID combo box here...
@@ -320,10 +320,12 @@ if __name__ == '__main__':
 ##    str_dem_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/10m/020700dem_UTM18N_drclip_3mresample.tif'
 ##    str_dem_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEM_02050205_USGS_AEA.tif'
 #    str_dem_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEMfel_dem_post.tif'
-#    str_fel_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMfel.tif'
-    str_dem_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\dr3m_dem.tif'
+#    str_dem_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMfel.tif'
+    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_dem_clip_utm18.tif'
+#    str_dem_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\dr3m_dembreach.tif'
+#    str_dem_path = r'D:\fernando\HAND\020802\020802_utm.tif'
 
-    str_dembreach_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\dr3m_dem_breach.tif'
+#    str_dembreach_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\dr3m_dembreach.tif'
     
     ## << VECTOR STREAMLINES (net) >>  
 ##    str_net_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/Network04.shp'
@@ -332,7 +334,11 @@ if __name__ == '__main__':
 ##    str_net_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/02050205_StreamNetwork_USGS_AEA_2.shp'
 #    str_net_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEMnet1000.shp'
 #    str_net_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMnet_UNIQUE_ID.shp'
-    str_net_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\nhd_hires\dr_nhd_hires.shp'
+    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\nhd_hires\dr_nhd_hires.shp'
+#    str_net_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\headwaters\upperreaches.shp'
+#    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\dr3m_net_raw.shp'
+#    str_net_path = r'D:\fernando\HAND\020802\020802-flows-utm.shp'
+    str_net_out_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
     
     ## << RASTER STREAMLINES (src) >>
     str_src_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMsrc.tif'
@@ -343,13 +349,16 @@ if __name__ == '__main__':
     ## << BANK PIXELS >>   
 ##    str_bankpixels_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/bank_pixels_02050205_H.tif'
 #    str_bankpixels_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_bankpixels.tif'
-    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels.tif'
+#    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
+    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\bankpixels_raw_dem.tif'
+#    str_bankpixels_path =r'D:\fernando\HAND\020802\0202802_utm_bankpixels.tif'
     
     ## << BANK POINTS >>    
 #    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_bankpoints.shp'
 ##    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/02050205_bankpoints_USGS_AEA.shp'
 #    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/020700_bankpts.shp'
-    str_bankpts_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpts_TEST.shp'
+#    str_bankpts_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpts_TEST.shp'
+    str_bankpts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\headwaters\bankpts.shp'
  
     ## << FLOODPLAIN >>
 #    str_fp_path = '/home/sam.lamont/USGSChannelFPMetrics/testing/fp_pixels.tif'
@@ -359,7 +368,8 @@ if __name__ == '__main__':
 #    str_xns_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/02050205_xns_USGS_AEA_2.shp'
 #    str_xns_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_net_xnptdist1.shp'
 #    str_xns_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/020700_xns.shp'
-    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\chan_xns_TEST.shp'
+#    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\chan_xns_TEST.shp'
+    str_xns_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\headwaters\xns.shp'
 
     ## << HAND (dd) >>    
 #    str_hand_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_hand.tif'
@@ -369,11 +379,18 @@ if __name__ == '__main__':
     str_sheds_path = '/home/sam.lamont/USGSChannelFPMetrics/testing/dr3m_sheds_diss2.shp'   
     
     ## << DANGLE POINTS >>
-    str_danglepts_path= r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\dr_nhd_hires_dangles.tif'
+    str_startptgrid_path= r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr_nhd_hires_dangles.tif'
+#    str_danglepts_path=r'D:\fernando\HAND\020802\sam_test\020802_dangles.tif'
+    
+    ## << OPENNESS >>  THIS NEEDS WORK -- Table this til later if you have time (July5)
+#    str_pos_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\dr_pos_raw.tif'    
+#    str_pos_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\openness\Openness\diffphix_pos' 
+#    str_neg_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\dr_neg_raw.tif'    
     
     str_reachid='LINKNO'
 #    str_reachid='ARCID'
-    str_orderid='Order_'
+#    str_reachid='COMID'
+    str_orderid='StreamOrde'
     cell_size=3
     
 #        self.p_fitlength.setText('3')
@@ -390,24 +407,28 @@ if __name__ == '__main__':
   
 ##    # << Build Strealine Coordinates >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
-#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid)
+#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_out_path, cell_size, str_reachid, str_orderid)
 #    df_coords.to_csv('df_coords_Chillisquaque.csv') # just for testing
+#    df_coords.to_csv('df_coords_DifficultRun.csv') # just for testing
     
 #    print('Reading pre-calculated csv file...')
+#    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )    
 #    streamlines_crs = {'init': u'epsg:26918'}
 #   
 #        << Find bank pixels using moving window along streamline >>
-#    funcs_v2.bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_path) 
+#    funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path) 
+#    funcs_v2.bankpixels_from_openness_window(df_coords, str_pos_path, str_bankpixels_path) 
+#    funcs_v2.bankpixels_from_openness_window_buffer_all(df_coords, str_dem_path, str_net_path, str_pos_path, str_neg_path) 
     
 ##    # << Channel Width via Bank Pixels >>    
 #    funcs_v2.channel_width_bankpixels(str_net_path, str_bankpixels_path, str_reachid, cell_size)    
-#    funcs_v2.workerfuncs.channel_width_bankpixels_segments(funcs, df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
-#    funcs_v2.workerfuncs.channel_width_bankpixels_segments_po(funcs, df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
+#    funcs_v2.channel_width_bankpixels_segments(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
+#    funcs_v2.channel_width_bankpixels_segments_po(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
     
     # << Floodplain width via reach buffers >> 
     # def floodplain_width_reach_buffers(self, str_streamlines_path, str_fp_path, str_reachid, cell_size):
-#    funcs_v2.workerfuncs.floodplain_width_reach_buffers_po(funcs, str_net_path, str_fp_path, str_reachid, cell_size)
+#    funcs_v2.floodplain_width_reach_buffers_po(funcs, str_net_path, str_fp_path, str_reachid, cell_size)
 
 #      << Find bank pixels using moving window along streamline >>
 #    funcs_v2.fp_from_streamline_window(df_coords, str_dem_path, str_fp_path)
@@ -421,7 +442,7 @@ if __name__ == '__main__':
 #    funcs_v2.analyze_hand_sheds(str_sheds_path, str_hand_path, parm_ivert)
     
     # Build and write the Xn shapefile...
-#    funcs_v2.workerfuncs.write_xns_shp(funcs, df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
+#    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
 
 #    # << INTERPOLATE XNs >>
 #    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
@@ -451,8 +472,10 @@ if __name__ == '__main__':
 #        funcs_v2.workerfuncs.taudem_dinfdd(funcs, str_fel_path, str_src_path, str_ang_path, str_hand_path, str_slp_path)
      
      # << DEM Pre-processing using TauDEM and GoSpatial >>              
-    funcs_v2.create_wg_from_streamlines(str_net_path, str_dem_path, str_danglepts_path)    
-    funcs_v2.preprocess_dem(str_dem_path, str_danglepts_path)
+#    funcs_v2.create_wg_from_streamlines(str_net_in_path, str_dem_path, str_startptgrid_path)    
+    funcs_v2.preprocess_dem(str_dem_path, str_startptgrid_path)
+    
+    #    funcs_v2.get_rowcol_from_wg(str_danglepts_path) # NOT NEEDED (replaced by Stream Reach and Watershed -- TauDEM)
     
     print('\n<<< End >>>\r\n')
     print('Run time:  {}'.format(timeit.default_timer() - start_time_0))

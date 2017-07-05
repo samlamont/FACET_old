@@ -6,6 +6,7 @@ Created on Wed Dec  7 14:51:45 2016
 """
 #import pprint # neat!
 
+import math
 import subprocess
 import timeit
 import numpy as np
@@ -18,6 +19,8 @@ from math import isinf, sqrt
 import rasterio
 import rasterio.tools.mask
 from rasterio.warp import transform
+#from rasterio import features
+import rasterio.features
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -38,6 +41,7 @@ from PyQt4 import QtGui, QtCore
 #import scipy.io as sio
 
 import fiona
+from fiona import collection
 
 import gospatial as gs
 
@@ -99,6 +103,7 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
 
     lst_coords=[]
     lst_dangles=[]
+#    lst_finalpts_rowcols=[]
 
     with fiona.open(str_streamlines_path) as lines:        
         
@@ -147,16 +152,17 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
         tpl_pts = transform(streamlines_crs, out_meta['crs'], lst_x, lst_y)
         lst_dangles = zip(tpl_pts[0], tpl_pts[1])
         
-        for coords in lst_dangles:            
-            
+        for coords in lst_dangles:                        
             col, row = ~ds_dem.affine * (coords[0], coords[1]) # BUT you have to convert coordinates from hires to dem        
-            arr_danglepts[row,col] = 1.
+            arr_danglepts[int(row),int(col)] = 1.
+#            # Could save these points here for later use building the streamlines??
+#            tpl_pts=(row,col)
+#            lst_finalpts_rowcols.append(tpl_pts)
         
-    # Now open the new grid using this metadata...    
+    # Now write the new grid using this metadata...    
     with rasterio.open(str_danglepts_path, "w", **out_meta) as dest:
         dest.write(arr_danglepts, indexes=1)
-            
-            
+                        
 #    # Now write out the dangle points into a new shapefile...
 #    print('pause')
 #    test_schema = {'geometry': 'Point', 'properties': {'linkno': 'int'}} 
@@ -172,7 +178,23 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
 #            prop = {'linkno': 1}
 #            dangles.write({'geometry':pt, 'properties':prop})         
         
-    return
+    return 
+
+# ===============================================================================
+#  Get row/col coords of start pts from weight grid
+# ===============================================================================
+def get_rowcol_from_wg(str_danglepts_path):
+    
+    print('Reading weight grid...')
+    with rasterio.open(str_danglepts_path) as ds_wg:
+        wg_rast = ds_wg.read(1) # numpy array
+#        wg_crs = ds_wg.crs
+#        wg_affine = ds_wg.affine
+        
+    print('Getting indices...')
+    row_cols = np.where(wg_rast>0)    
+    
+    return row_cols
     
 # ===============================================================================
 #  Mega-function for processing a raw DEM
@@ -181,12 +203,14 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
 # ===============================================================================        
 def preprocess_dem(str_dem_path, str_danglepts_path):
     try:
-
-        distmeth = 'v'
-        statmeth = 'ave'
-        inputProc = str(4)
-
         
+        # Split DEM path and filename...  # NOT OS INDEPENDENT??
+        path_to_dem, dem_filename = os.path.split(str_dem_path)    
+#        str_outname = tail[:-4] + '_fpwidth.shp'
+#        str_outpath = head + '/' + str_outname         
+
+        inputProc = str(4)
+       
         # ========== << 1. Breach Depressions with GoSpatial/Whitebox Tool >> ==========
         '''
         This tool is used to remove the sinks (i.e. topographic depressions and flat areas) from digital elevation models (DEMs) using a highly efficient and flexible breaching, or carving, method.
@@ -201,19 +225,39 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
         # Get the gospatial version number
         print(gs.version())   
 #        print(gs.tool_help("BreachDepressions"))
-        gs.set_working_dir(r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach')
+#        gs.set_working_dir(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach')
+#        gs.set_working_dir('r\''+path_to_dem+'\'')
+        gs.set_working_dir(path_to_dem)
     
         # Run the BreachDepressions tool, specifying the arguments.
         name = "BreachDepressions"
-        args = ['dr3m_dem.tif', 'dr3m_breach.tif', '-1', '-1', 'False', 'True']        
+        
+        # << Define all filenames here >>
+        breach_filename=dem_filename[:-4]+'_breach.tif'
+        fel = path_to_dem + '\\' + dem_filename[:-4]+'_breach.tif'
+        p = path_to_dem + '\\' + breach_filename[:-4]+'_p.tif'
+        sd8 = path_to_dem + '\\' + breach_filename[:-4]+'_sd8.tif'        
+        ad8_wg = path_to_dem + '\\' + breach_filename[:-4]+'_ad8_wg.tif'
+        wtgr = str_danglepts_path
+        ad8_no_wg = path_to_dem + '\\' + breach_filename[:-4]+'_ad8_no_wg.tif'
+        ord_g = path_to_dem + '\\' + breach_filename[:-4]+'_ord_g.tif'
+        tree = path_to_dem + '\\' + breach_filename[:-4]+'_tree'
+        coord =path_to_dem + '\\' + breach_filename[:-4]+'_coord'
+        net = path_to_dem + '\\' + breach_filename[:-4]+'_net.shp'
+        w = path_to_dem + '\\' + breach_filename[:-4]+'_w.tif'
+        slp = path_to_dem + '\\' + breach_filename[:-4]+'_slp.tif'
+        ang = path_to_dem + '\\' + breach_filename[:-4]+'_ang.tif'
+        dd = path_to_dem + '\\' + breach_filename[:-4]+'_hand.tif'
+        
+        args = [dem_filename, breach_filename, '-1', '-1', 'False', 'False']        
         
         # Run the tool and check the return value
         ret = gs.run_tool(name, args, callback)
         if ret != 0:
             print("ERROR: return value={}".format(ret)) 
-#            
-#        # =========== << 2. Fill Pits with TauDEM (OPTION?) ==========
-#        fel = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\dr3m_fel.tif'
+            
+#        # =========== << 2. Fill Pits with TauDEM (OPTIONAL -- Using BreachDepressions instead) ==========
+#        fel = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach.tif'
 #        cmd = 'mpiexec -n ' + inputProc + ' pitremove -z ' + '"' + str_dem_path + '"' + ' -fel ' + '"' + fel + '"'
 ##        if considering4way == 'true':
 ##            cmd = cmd + ' -4way '
@@ -235,9 +279,14 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
 #        print(message)
             
 #        # ==============  << 3. D8 FDR with TauDEM >> ================
-        fel = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach.tif'
-        p = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach_p.tif'
-        sd8 = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach_sd8.tif'
+#        fel = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach.tif'
+#        fel = path_to_dem + '\\' + breach_filename
+#        p = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach_p.tif'
+#        sd8 = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach_sd8.tif'
+            
+#        fel = r'D:\fernando\HAND\020802\sam_test\020802_fel.tif'
+#        p = r'D:\fernando\HAND\020802\sam_test\020802_p.tif'
+#        sd8 = r'D:\fernando\HAND\020802\sam_test\020802_sd8.tif'           
                 
         cmd = 'mpiexec -n ' + inputProc + ' D8FlowDir -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
               ' -sd8 ' + '"' + sd8 + '"'
@@ -258,23 +307,33 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
             message = message + line        
         print(message)            
             
-        # ============= << 4. D8 FAC with TauDEM >> ================
-#        wtgr = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_wg_rc.tif'
-        wtgr = str_danglepts_path
-        ad8 = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach_ad8.tif'
+#        # ============= << 4. D8 FAC with TauDEM >> ================
+##        wtgr = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_wg_rc.tif'
+#        wtgr = str_danglepts_path
+##        ad8 = r'D:\fernando\HAND\020802\sam_test\020802_ad8.tif'
+#        ad8_wg = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8_wg.tif'
         
-        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8 + '"' + ' -wg ' + '"' + wtgr + '"' + ' -nc '
-#        if arcpy.Exists(ogrfile):
-#            cmd = cmd + ' -o ' + '"' + shfl + '"'
-#        if arcpy.Exists(weightgrid):
-#            cmd = cmd + ' -wg ' + '"' + wtgr + '"'
-#        if edgecontamination == 'false':
-#            cmd = cmd + ' -nc '
-            
-#        print("\nCommand Line:\n" + cmd)
+        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
         
         # Submit command to operating system
-        print('Running TauDEM D8 FAC...')
+        print('Running TauDEM D8 FAC (weight grid)...')
+        os.system(cmd)
+        # Capture the contents of shell command and print it to the arcgis dialog box
+        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        
+        message = "\n"
+        for line in process.stdout.readlines():
+            if isinstance(line, bytes):	    # true in Python 3
+                line = line.decode()
+            message = message + line
+        print(message)   
+         
+        # ============= << 4.a AD8 no weight grid with TauDEM >> ================
+#        ad8_no_wg = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8_no_wg.tif'
+        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
+        
+        # Submit command to operating system
+        print('Running TauDEM D8 FAC (no weights)...')
         os.system(cmd)
         # Capture the contents of shell command and print it to the arcgis dialog box
         process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -285,10 +344,49 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
                 line = line.decode()
             message = message + line
         print(message)            
+        
+        # ============= << 4.b StreamReachandWatershed with TauDEM >> ================
+#        src = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8.tif'
+#        ad8_no_wg = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8_no_wg.tif'
+#        ord_g = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ord.tif'
+#        tree = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_tree'
+#        coord = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_coord'
+#        net = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
+#        w = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_w.tif'
+        
+        cmd = 'mpiexec -n ' + inputProc + ' StreamNet -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
+              ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
+              '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
+              '"'
+        
+        # Submit command to operating system
+        print('Running TauDEM Stream Reach and Watershed...')
+        os.system(cmd)
+        
+        # Capture the contents of shell command and print it to the arcgis dialog box
+        process=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        
+        message = "\n"
+        for line in process.stdout.readlines():
+            if isinstance(line, bytes):	    # true in Python 3
+                line = line.decode()
+            message = message + line        
+        print(message) 
+        
+        # Let's get rid of some output that we are not currently using...
+        try:
+            os.remove(w)
+            os.remove(coord)
+            os.remove(tree)
+            os.remove(ord_g)
+        except:
+            print('Warning: Problem removing files!')
+            pass
+
             
         # ============= << 5. Dinf with TauDEM >> =============
-        slp = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach_slp.tif'
-        ang = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach_ang.tif'
+#        slp = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_slp.tif'
+#        ang = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ang.tif'
                 
         print('Running TauDEM Dinfinity...')        
         cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
@@ -310,11 +408,14 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
         print(message)            
         
         # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
-        dd = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_breach_dd.tif'
+#        dd = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_dd.tif'
+
+        distmeth = 'v'
+        statmeth = 'ave'
         
-        print('Running TauDEM Dinf Distance Down...')
+        print('Running TauDEM Dinf Distance Down...') # Using Breached DEM here
         cmd = 'mpiexec -n ' + inputProc + ' DinfDistDown -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
-              ' -src ' + '"' + ad8 + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
+              ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
     
         # Submit command to operating system
         os.system(cmd)
@@ -331,13 +432,11 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
             
         print(message)
 
-    
     except:
         print("Unexpected error:", sys.exc_info()[0])
         raise        
     
     return
-
 
 # ===============================================================================
 #  NOTE:  Much of the following function was copied directly from Tarboton's 
@@ -1691,13 +1790,443 @@ def fp_from_streamline_window(df_coords, str_dem_path, str_fp_path):
 #        df_dist = pd.DataFrame(lst_dist)
     
     return
+
+# ===============================================================================
+#  Calculates openness from DEM window
+# ===============================================================================  
+def openness_from_elev_window(arr_elev_norm, arr_mask_dist, cell_size, searchR, ind_diag_nw, ind_diag_ne, ind_diag_sw, ind_diag_se):
+    
+    arr_mask_dist[50,50]=1 # TEST TEST
+    
+    arr_ang = np.arctan(arr_elev_norm/arr_mask_dist) # NOTE:  Division by zero here
+    
+    # Find maximum and minimum in every direction...OR construct an array of each direction and use np.amin/amax??
+    df_dirs = pd.DataFrame([arr_ang[ind_diag_nw],
+                            arr_ang[:searchR, searchR],
+                            arr_ang[ind_diag_ne],
+                            arr_ang[searchR,searchR+1:],
+                            arr_ang[ind_diag_se],
+                            arr_ang[searchR+1:,searchR],
+                            arr_ang[ind_diag_sw],
+                            arr_ang[searchR,:searchR]])
+
+#                    nw_max = np.max(arr_ang[ind_diag_nw])
+#                    n_max = np.max(arr_ang[:w_height/2, w_width/2])
+#                    ne_max = np.max(arr_ang[ind_diag_ne])
+#                    e_max = np.max(arr_ang[w_height/2,w_width/2:])
+#                    se_max = np.max(arr_ang[ind_diag_se])
+#                    s_max = np.max(arr_ang[w_height/2+1:,w_width/2])
+#                    sw_max = np.max(arr_ang[ind_diag_sw])
+#                    w_max = np.max(arr_ang[w_height/2,:w_width/2])
+    
+    # Get max and mins along columns...
+    srs_max = df_dirs.max(axis=1)
+#    srs_min = df_dirs.min(axis=1)
+    
+    # Convert to zenith and nadir (add/subtract from 90)
+    srs_zenith = 90.0 - srs_max
+#    srs_nadir = 90 + srs_min
+                        
+    # Openness is average of each (positive: zenith; negative: nadir)
+    po = np.mean(srs_zenith)   
+    
+    return po
+    
+# ===============================================================================
+#  Calculates openness from DEM window (alternate method)
+# ===============================================================================  
+def openness_from_elev_window_numpy(arr_elev_norm, arr_mask_dist, cell_size, searchR, ind_diag_nw, ind_diag_ne, ind_diag_sw, ind_diag_se):
+    
+    arr_mask_dist[50,50]=1 # TEST TEST
+    
+    arr_ang = np.arctan(arr_elev_norm/arr_mask_dist) # NOTE:  Division by zero here
+       
+    # NOTE:  Convert these to degrees...
+    degcon = 180 / math.pi
+    
+    nw_max = degcon*np.max(arr_ang[ind_diag_nw])
+    n_max = degcon*np.max(arr_ang[:searchR, searchR])
+    ne_max = degcon*np.max(arr_ang[ind_diag_ne])
+    e_max = degcon*np.max(arr_ang[searchR,searchR+1:])
+    se_max = degcon*np.max(arr_ang[ind_diag_se])
+    s_max = degcon*np.max(arr_ang[searchR+1:,searchR])
+    sw_max = degcon*np.max(arr_ang[ind_diag_sw])
+    w_max = degcon*np.max(arr_ang[searchR,:searchR])
+    
+    nw_min = degcon*np.min(arr_ang[ind_diag_nw])
+    n_min = degcon*np.min(arr_ang[:searchR, searchR])
+    ne_min = degcon*np.min(arr_ang[ind_diag_ne])
+    e_min = degcon*np.min(arr_ang[searchR,searchR+1:])
+    se_min = degcon*np.min(arr_ang[ind_diag_se])
+    s_min = degcon*np.min(arr_ang[searchR+1:,searchR])
+    sw_min = degcon*np.min(arr_ang[ind_diag_sw])
+    w_min = degcon*np.min(arr_ang[searchR,:searchR])    
+    
+    # Get max and mins along columns...
+#    srs_max = df_dirs.max(axis=1)
+#    srs_min = df_dirs.min(axis=1)
+    
+    # Convert to zenith and nadir (add/subtract from 90)
+#    srs_zenith = 90.0 - srs_max
+#    srs_nadir = 90 + srs_min
+                        
+    # Openness is average of each (positive: zenith; negative: nadir)
+#    po = np.mean(srs_zenith)   
+    po_pos = np.mean([90. - nw_max,90. - n_max,90. - ne_max,90. - e_max,90. - se_max,90. - s_max,90. - sw_max,90. - w_max])
+    po_neg = np.mean([90. + nw_min,90. + n_min,90. + ne_min,90. + e_min,90. + se_min,90. + s_min,90. + sw_min,90. + w_min])
+    
+    return po_pos, po_neg    
+
+# ===============================================================================
+#  Searchable window with center pixel defined by get_stream_coords_from_features
+# ===============================================================================  
+def bankpixels_from_openness_window_buffer_all(df_coords, str_dem_path, str_net_path, str_pos_path, str_neg_path):
+    
+    cell_size=3    
+    searchRadius = 150 # m
+    buff_dist=30    
+    
+    searchR = searchRadius/cell_size
+    
+    w_height=searchR*2 # number of rows.       This is actually half the window size
+    w_width=searchR*2  # number of columns.    This is actually half the window size
+    
+    # Construct a distance array based on searchR and cell size...
+    arr_dist_xy = cell_size*np.array(range(0,searchR+1,1))      
+     
+    arr_dist_ang = np.sqrt(cell_size**2 + cell_size**2)*np.array(range(0,searchR+1,1))  
+    arr_mask_dist = np.ones((searchR*2+1, searchR*2+1)) # Add 1 only if it's an even number?
+    
+    arr_mask_dist[:,searchR] = np.hstack((arr_dist_xy[::-1], arr_dist_xy[1:]))
+    arr_mask_dist[searchR,:] = np.hstack((arr_dist_xy[::-1], arr_dist_xy[1:]))
+    
+    # Get indices of cardinal directions for later...
+    ind_diag = np.diag_indices_from(arr_mask_dist) # Will I ever use a non-square window?
+    
+    ind_diag_nw = (ind_diag[0][:searchR], ind_diag[1][:searchR])    
+    ind_diag_se = (ind_diag[0][searchR+1:], ind_diag[1][searchR+1:])
+    
+    ind_diag_ne = (ind_diag[0][:searchR], np.abs(ind_diag_nw[1]-w_width))
+    ind_diag_sw = (np.abs(ind_diag_nw[0]-w_height), ind_diag[1][:searchR])   
+    
+    arr_mask_dist[ind_diag] = np.hstack((arr_dist_ang[::-1], arr_dist_ang[1:]))
+        
+    # Flip it and fill the other diagonal...
+    arr_mask_dist = np.fliplr(arr_mask_dist)
+    arr_mask_dist[np.diag_indices_from(arr_mask_dist)] = np.hstack((arr_dist_ang[::-1], arr_dist_ang[1:]))      
+    
+    print('Bank pixels from openness windows, buffered')
+    
+    lst_lyr=[]
+    
+    
+#    j=0
+        
+    # IDEA:  Buffer all streamlines first and extract DEM
+    # Open the DEM...
+    with rasterio.open(str(str_dem_path)) as ds_dem:    
+        
+        out_meta = ds_dem.meta.copy()  
+        arr_pos_openness=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])          
+        arr_neg_openness=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype']) 
+    
+        # Open the streamlines and build a multiline string for buffering...
+        with fiona.open(np.str(str_net_path), 'r') as streamlines:
+            
+            for line in streamlines:                
+                lst_lyr.append(shape(line['geometry']))                
+        
+            lyr = MultiLineString(lst_lyr)
+            
+            # Apply the buffer...
+            print('Buffering stream lines...')
+            lyr_buffer = lyr.buffer(buff_dist)
+            
+            buff = mapping(lyr_buffer)            
+            
+            # Clipping DEM...
+            print('Clipping DEM...')
+            dem_clip, out_transform = rasterio.tools.mask.mask(ds_dem, [buff], crop=False) 
+            dem_clip = dem_clip[0]
+            
+            
+#            out_meta['affine']=out_transform
+#            out_meta['height']=np.shape(dem_clip)[0] # rows
+#            out_meta['width']=np.shape(dem_clip)[1] # cols
+            
+#            plt.imshow(dem_clip[0])
+            
+#            # DO THIS PER REACH?
+#            for line in streamlines:
+#                
+#                j += 1
+#                print('j: {}'.format(j))
+#                if j > 1: break
+#            
+#                # Clip the DEM using the buffered streams...            
+#                geom = shape(line['geometry'])   # Convert to shapely geometry to operate on it
+##                bounds = geom.bounds
+#                geom_buff = geom.buffer(buff_dist,cap_style=2)
+#                buff = mapping(geom_buff)                
+#                                
+#                dem_clip, out_transform = rasterio.tools.mask.mask(ds_dem, [buff], crop=True) 
+#            
+#        #        plt.imshow(dem_clip[0])
+#            
+#                # Transform to pixel space
+#        #       col_max, row_max = ~ds_dem.affine * (df_coords['x1'], df_coords['y1'])
+#                                        
+#                print('Calculating Openness...')
+#                
+            shp=np.shape(dem_clip)
+#                
+#                bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)
+#                
+#                # df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y']) 
+#                col_min, row_min = ~ds_dem.affine * (bounds[0], bounds[3]) # upper left row and column of window?
+              
+            print('Calculating Openness...') # Gotta be a quicker way here
+            for row in range(searchR, shp[0]-searchR):
+                for col in range(searchR, shp[1]-searchR):
+                    
+                    if dem_clip[int(row),int(col)]<-9999.0: continue # skip nodata values
+                    
+                    row_min_w = np.int(row - searchR)
+                    row_max_w = np.int(row + searchR)
+                    col_min_w = np.int(col - searchR)
+                    col_max_w = np.int(col + searchR)
+                    
+                    arr_elev = ds_dem.read(1, window=((row_min_w, row_max_w+1),(col_min_w, col_max_w+1)))                 
+                    
+                    # Get elevation difference...
+                    arr_elev = arr_elev - dem_clip[row,col]
+                    
+                    po_pos, po_neg = openness_from_elev_window_numpy(arr_elev, arr_mask_dist, cell_size, searchR, ind_diag_nw, ind_diag_ne, ind_diag_sw, ind_diag_se)                    
+
+                    arr_pos_openness[int(row),int(col)]=po_pos
+                    arr_neg_openness[int(row),int(col)]=po_neg
+                    
+                    
+         
+        arr_pos_openness[arr_pos_openness<=0.] = out_meta['nodata'] 
+        arr_neg_openness[arr_neg_openness<=0.] = out_meta['nodata'] 
+
+        print('Writing Positive Openness .tif...')
+        with rasterio.open(str_pos_path, "w", **out_meta) as dest:
+            dest.write(arr_pos_openness, indexes=1)
+            
+        print('Writing Negative Openness .tif...')
+        with rasterio.open(str_neg_path, "w", **out_meta) as dest:
+            dest.write(arr_neg_openness, indexes=1)            
+
+    
+    return
+
+# ===============================================================================
+#  Searchable window with center pixel defined by get_stream_coords_from_features
+# ===============================================================================  
+def bankpixels_from_openness_window_buffer_per_reach(df_coords, str_dem_path, str_net_path, str_bankpixels_path):
+    
+    cell_size=3    
+    searchRadius = 150 # m
+    searchR = searchRadius/cell_size
+    
+    w_height=searchR*2 # number of rows.       This is actually half the window size
+    w_width=searchR*2  # number of columns.    This is actually half the window size
+    
+    # Construct a distance array based on searchR and cell size...
+    arr_dist_xy = cell_size*np.array(range(0,searchR+1,1))      
+     
+    arr_dist_ang = np.sqrt(cell_size**2 + cell_size**2)*np.array(range(0,searchR+1,1))  
+    arr_mask_dist = np.ones((searchR*2+1, searchR*2+1)) # Add 1 only if it's an even number?
+    
+    arr_mask_dist[:,searchR] = np.hstack((arr_dist_xy[::-1], arr_dist_xy[1:]))
+    arr_mask_dist[searchR,:] = np.hstack((arr_dist_xy[::-1], arr_dist_xy[1:]))
+    
+    # Get indices of cardinal directions for later...
+    ind_diag = np.diag_indices_from(arr_mask_dist) # Will I ever use a non-square window?
+    
+    ind_diag_nw = (ind_diag[0][:searchR], ind_diag[1][:searchR])    
+    ind_diag_se = (ind_diag[0][searchR+1:], ind_diag[1][searchR+1:])
+    
+    ind_diag_ne = (ind_diag[0][:searchR], np.abs(ind_diag_nw[1]-w_width))
+    ind_diag_sw = (np.abs(ind_diag_nw[0]-w_height), ind_diag[1][:searchR])   
+    
+    arr_mask_dist[ind_diag] = np.hstack((arr_dist_ang[::-1], arr_dist_ang[1:]))
+        
+    # Flip it and fill the other diagonal...
+    arr_mask_dist = np.fliplr(arr_mask_dist)
+    arr_mask_dist[np.diag_indices_from(arr_mask_dist)] = np.hstack((arr_dist_ang[::-1], arr_dist_ang[1:]))      
+    
+    print('Bank pixels from openness windows, buffered...')
+    
+#    lst_lyr=[]
+    buff_dist=10
+    
+    j=0
+        
+    # IDEA:  Buffer all streamlines first and extract DEM
+    # Open the DEM...
+    with rasterio.open(str(str_dem_path)) as ds_dem:    
+        
+        out_meta = ds_dem.meta.copy()  
+        arr_openness=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])          
+    
+        # Open the streamlines and build a multiline string for buffering...
+        with fiona.open(np.str(str_net_path), 'r') as streamlines:
+            
+#            for line in streamlines:                
+#                lst_lyr.append(shape(line['geometry']))                
+#        
+#            lyr = MultiLineString(lst_lyr)
+#            
+#            # Apply the buffer...
+#            lyr_buffer = lyr.buffer(buff_dist)
+            
+            # DO THIS PER REACH?
+            for line in streamlines:
+                
+                j += 1
+                print('j: {}'.format(j))
+                if j > 1: break
+            
+                # Clip the DEM using the buffered streams...            
+                geom = shape(line['geometry'])   # Convert to shapely geometry to operate on it
+#                bounds = geom.bounds
+                geom_buff = geom.buffer(buff_dist,cap_style=2)
+                buff = mapping(geom_buff)                
+                                
+                dem_clip, out_transform = rasterio.tools.mask.mask(ds_dem, [buff], crop=True) 
+            
+        #        plt.imshow(dem_clip[0])
+            
+                # Transform to pixel space
+        #       col_max, row_max = ~ds_dem.affine * (df_coords['x1'], df_coords['y1'])
+                          
+                dem_clip = dem_clip[0]
+                
+                print('Calculating Openness...')
+                
+                shp=np.shape(dem_clip)
+                
+                bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)
+                
+                # df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y']) 
+                col_min, row_min = ~ds_dem.affine * (bounds[0], bounds[3]) # upper left row and column of window?
+            #    
+                for row in range(shp[0]):
+                    for col in range(shp[1]):
+                        
+                        if dem_clip[int(row),int(col)]<-9999.0: continue # skip nodata values
+                        
+                        row_min_w = np.int(row - searchR + row_min)
+                        row_max_w = np.int(row + searchR + row_min)
+                        col_min_w = np.int(col - searchR + col_min)
+                        col_max_w = np.int(col + searchR + col_min)
+                        
+                        arr_elev = ds_dem.read(1, window=((row_min_w, row_max_w+1),(col_min_w, col_max_w+1)))                 
+                        
+                        # Get elevation difference...
+                        arr_elev = arr_elev - dem_clip[row,col]
+                        
+                        po = openness_from_elev_window(arr_elev, arr_mask_dist, cell_size, searchR, ind_diag_nw, ind_diag_ne, ind_diag_sw, ind_diag_se)                    
+
+                        arr_openness[int(row+row_min),int(col+col_min)]=po
+                    
+
+          
+        arr_openness[arr_openness<=0.] = out_meta['nodata'] 
+        print('Writing Openness .tif...')
+        with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
+            dest.write(arr_openness, indexes=1)
+
+    
+    return
     
 # ===============================================================================
 #  Searchable window with center pixel defined by get_stream_coords_from_features
 # ===============================================================================  
-def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_path, self):
+def bankpixels_from_openness_window(df_coords, str_openness_path, str_bankpixels_path):
     
-    print('Bank pixels from streamline windows...')
+    print('Bank pixels from streamline windows of openness...')
+    
+    w_height=20 # number of rows
+    w_width=20  # number of columns
+    
+    j=0   
+    
+    with rasterio.open(str_openness_path) as ds_open:
+        
+        # Transform to pixel space
+        df_coords['col'], df_coords['row'] = ~ds_open.affine * (df_coords['x'], df_coords['y'])   
+        
+        df_coords[['row','col']] = df_coords[['row','col']].astype(np.int32)  
+        df_coords.drop_duplicates(['col','row'], inplace=True) # rounding to integer
+        
+        out_meta = ds_open.meta.copy()  
+        buff=3 # cell size?
+#        cell_size=3
+        
+        arr_bankpts=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
+        
+        for tpl_row in df_coords.itertuples():
+
+            j+=1
+            
+#            print(tpl_row.linkno)
+            
+#            if tpl_row.linkno <> 12:
+#                continue
+            
+#            print('pause')
+            
+            row_min = np.int(tpl_row.row - np.int(w_height/2))
+            row_max = np.int(tpl_row.row + np.int(w_height/2))
+            col_min = np.int(tpl_row.col - np.int(w_width/2))
+            col_max = np.int(tpl_row.col + np.int(w_width/2))            
+            
+            # Now get the DEM specified by this window as a numpy array...
+            w = ds_open.read(1, window=((row_min, row_max),(col_min, col_max))) 
+            
+            w = np.ma.masked_less(w, 0) 
+            
+            # Just pick out the low values (less than the Nth percentile)...
+            w[w>np.percentile(w,20)] = out_meta['nodata']            
+            
+            
+            w = np.ma.masked_less(w, 0) # for plotting?
+            
+#            plt.imshow(w)
+#
+#            sys.exit()
+            
+            if np.size(w) > 9: # make sure a window of appropriate size was returned from the DEM
+#                            
+#                
+##                w_curve[w_curve<np.max(w_curve)*0.30] = out_meta['nodata']
+#
+#                
+                arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w[buff:w_height-buff, buff:w_width-buff]
+#                
+#
+#
+#
+        arr_bankpts[arr_bankpts<=0.] = out_meta['nodata']            
+        
+        print('Writing bankpts .tif...')
+        with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
+            dest.write(arr_bankpts, indexes=1)
+            
+#        df_dist = pd.DataFrame(lst_dist)
+    
+    return
+    
+# ===============================================================================
+#  Searchable window with center pixel defined by get_stream_coords_from_features
+# ===============================================================================  
+def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path):
+    
+    print('Bank pixels from curvature windows...')
     
     # Convert df_coords x-y to row-col via DEM affine
     # Loop over center row-col pairs accessing the window
@@ -1713,8 +2242,8 @@ def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_pa
 #    lst_y2=[]    
     
     j=0   
-    progBar = self.progressBar
-    progBar.setVisible(True)   
+#    progBar = self.progressBar
+#    progBar.setVisible(True)   
     
     with rasterio.open(str_dem_path) as ds_dem:
         
@@ -1730,18 +2259,22 @@ def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_pa
         out_meta = ds_dem.meta.copy()  
         buff=3 # cell size?
         cell_size=3
+        curve_thresh=0.30 # good for 3m DEM?
         
         arr_bankpts=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
 #        arr_bankpts=out_meta['nodata']
         
-        progBar.setRange(0, len(df_coords.index)) 
+#        progBar.setRange(0, len(df_coords.index)) 
         
         for tpl_row in df_coords.itertuples():
             
-            progBar.setValue(j)
+#            progBar.setValue(j)
             j+=1
             
 #            print(tpl_row.linkno)
+            
+            if (tpl_row.linkno == 111) or (tpl_row.linkno == 106) or (tpl_row.linkno == 139):
+                continue
             
             row_min = np.int(tpl_row.row - np.int(w_height/2))
             row_max = np.int(tpl_row.row + np.int(w_height/2))
@@ -1780,12 +2313,12 @@ def bankpixels_from_streamline_window(df_coords, str_dem_path, str_bankpixels_pa
                 w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
                 w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
                 
-                w_curve[w_curve<np.max(w_curve)*0.30] = out_meta['nodata']
-#                w_curve = np.ma.masked_less(w_curve, np.max(w_curve)*0.30) # for plotting?
+                w_curve[w_curve<np.max(w_curve)*curve_thresh] = out_meta['nodata'] 
+#                w_curve = np.ma.masked_less(w_curve, np.max(w_curve)*0.40) # for plotting?
                 
                 arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
                 
-#                if tpl_row.linkno == 13:
+#                if tpl_row.linkno == 8574501:
 #                    fig, ax = plt.subplots()
 #                    im = ax.imshow(w_curve, cmap='gist_rainbow')
 #                    fig.colorbar(im, orientation='vertical')
@@ -2670,29 +3203,30 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
 
 #            progBar.setRange(0,len(streamlines))
 
-        # ==================================
-        progdialog = QtGui.QProgressDialog("Getting stream coords from features...", "Cancel", 0, len(streamlines))
-        progdialog.setWindowTitle("FACET")
-        progdialog.setWindowModality(QtCore.Qt.WindowModal)
-        progdialog.resize(350, 110)
-        progdialog.show()       
-        # ==================================
+#        # ==================================
+#        progdialog = QtGui.QProgressDialog("Getting stream coords from features...", "Cancel", 0, len(streamlines))
+#        progdialog.setWindowTitle("FACET")
+#        progdialog.setWindowModality(QtCore.Qt.WindowModal)
+#        progdialog.resize(350, 110)
+#        progdialog.show()       
+#        # ==================================
         
         for line in streamlines:
             
-           # ====================================== 
-           QtCore.QCoreApplication.processEvents()
-           if progdialog.wasCanceled():
-               break     
-                       
-           progdialog.setValue(j)
-           # ======================================
+#           # ====================================== 
+#           QtCore.QCoreApplication.processEvents()
+#           if progdialog.wasCanceled():
+#               break     
+#                       
+#           progdialog.setValue(j)
+#           # ======================================
            
            j+=1
 #               self.emit(QtCore.SIGNAL("update(int)"), int(100*len(streamlines)/j)) 
            
            i_linkno = line['properties'][str_reachid]           
-           i_order = line['properties'][str_orderid]
+#           i_order = line['properties'][str_orderid]
+           i_order=1
            
            print('{} | {}'.format(i_linkno, j))
            
