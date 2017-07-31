@@ -10,7 +10,7 @@ import math
 import subprocess
 import timeit
 import numpy as np
-#from numpy import array
+from numpy import asarray
 import os
 #import ntpath
 from math import atan, ceil
@@ -19,7 +19,7 @@ from math import isinf, sqrt
 import rasterio
 import rasterio.tools.mask
 from rasterio.warp import transform
-#from rasterio import features
+from rasterio.features import shapes
 import rasterio.features
 
 import matplotlib
@@ -34,7 +34,8 @@ plt.style.use('ggplot')
 import pandas as pd
 #from scipy import ndimage
 #from shapely.geometry import Point, 
-from shapely.geometry import shape, mapping, LineString, MultiLineString, Point
+from shapely.geometry import shape, mapping, LineString, MultiLineString, Point, MultiPoint
+from shapely.ops import split
 #from jenks import jenks
 from PyQt4 import QtGui, QtCore
 
@@ -68,6 +69,51 @@ import gospatial as gs
 #    y_rot = np.sin(theta)*(x_orig-x_center) + np.cos(theta)*(y_orig-y_center) + y_center    
 #    return x_rot, y_rot
 
+def get_cell_size(str_grid_path):
+    
+    with rasterio.open(str(str_grid_path)) as ds_grid:
+        cs_x, cs_y = ds_grid.res    
+        
+    return cs_x
+
+def clip_features(str_lines_path, str_dem_path):
+    
+    # Build the output file name...
+    path_to_dem, dem_filename = os.path.split(str_dem_path)
+    output_filename = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'
+    
+    # Polygonize the raster DEM with rasterio...    
+    with rasterio.open(str(str_dem_path)) as ds_dem:
+        arr_dem = ds_dem.read(1)
+  
+    arr_dem[arr_dem>0] = 100
+    mask = arr_dem == 100
+   
+    results = (
+        {'properties': {'test': v}, 'geometry': s}
+        for i, (s, v) 
+        in enumerate(
+            shapes(arr_dem, mask=mask, transform=ds_dem.affine)))
+    
+    poly = next(results)   
+    poly_shp = shape(poly['geometry'])    
+
+    # Now clip/intersect the streamlines file with results via Shapely...
+    with fiona.open(str_lines_path) as lines:
+        
+        # Get the subset that falls within bounds of polygon...        
+        subset = lines.filter(bbox=shape(poly['geometry']).bounds)
+        lines_schema = lines.schema
+        lines_crs = lines.crs
+        
+        with fiona.open(output_filename, 'w', 'ESRI Shapefile', lines_schema, lines_crs) as dst:
+        
+            for line in subset:
+    
+                if shape(line['geometry']).within(poly_shp):
+                    dst.write(line)
+
+
 # ===============================================================================
 #  Callback for GoSpatial tool messages
 #    If a callback is not provided, it will simply print the output stream.
@@ -100,6 +146,7 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
 
     # NOTE:  Warning!! Lots of looping ahead
     # This entire function could probably use some re-design...although it does seem pretty fast so far
+    print('Creating weight grid from streamlines...')
 
     lst_coords=[]
     lst_dangles=[]
@@ -180,59 +227,37 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
         
     return 
 
-# ===============================================================================
-#  Get row/col coords of start pts from weight grid
-# ===============================================================================
-def get_rowcol_from_wg(str_danglepts_path):
-    
-    print('Reading weight grid...')
-    with rasterio.open(str_danglepts_path) as ds_wg:
-        wg_rast = ds_wg.read(1) # numpy array
-#        wg_crs = ds_wg.crs
-#        wg_affine = ds_wg.affine
-        
-    print('Getting indices...')
-    row_cols = np.where(wg_rast>0)    
-    
-    return row_cols
+## ===============================================================================
+##  Get row/col coords of start pts from weight grid
+## ===============================================================================
+#def get_rowcol_from_wg(str_danglepts_path):
+#    
+#    print('Reading weight grid...')
+#    with rasterio.open(str_danglepts_path) as ds_wg:
+#        wg_rast = ds_wg.read(1) # numpy array
+##        wg_crs = ds_wg.crs
+##        wg_affine = ds_wg.affine
+#        
+#    print('Getting indices...')
+#    row_cols = np.where(wg_rast>0)    
+#    
+#    return row_cols
     
 # ===============================================================================
 #  Mega-function for processing a raw DEM
 #   1. Breaching and filling
 #   2. TauDEM functions
 # ===============================================================================        
-def preprocess_dem(str_dem_path, str_danglepts_path):
+def preprocess_dem(str_dem_path, str_streamlines_path):
     try:
         
         # Split DEM path and filename...  # NOT OS INDEPENDENT??
-        path_to_dem, dem_filename = os.path.split(str_dem_path)    
-#        str_outname = tail[:-4] + '_fpwidth.shp'
-#        str_outpath = head + '/' + str_outname         
+        path_to_dem, dem_filename = os.path.split(str_dem_path)           
 
-        inputProc = str(4)
-       
-        # ========== << 1. Breach Depressions with GoSpatial/Whitebox Tool >> ==========
-        '''
-        This tool is used to remove the sinks (i.e. topographic depressions and flat areas) from digital elevation models (DEMs) using a highly efficient and flexible breaching, or carving, method.
-        Arg Name: InputDEM, type: string, Description: The input DEM name with file extension
-        Arg Name: OutputFile, type: string, Description: The output filename with file extension
-        Arg Name: MaxDepth, type: float64, Description: The maximum breach channel depth (-1 to ignore)
-        Arg Name: MaxLength, type: int, Description: The maximum length of a breach channel (-1 to ignore)
-        Arg Name: ConstrainedBreaching, type: bool, Description: Use constrained breaching?
-        Arg Name: SubsequentFilling, type: bool, Description: Perform post-breach filling?    
-        '''
-        
-        # Get the gospatial version number
-        print(gs.version())   
-#        print(gs.tool_help("BreachDepressions"))
-#        gs.set_working_dir(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach')
-#        gs.set_working_dir('r\''+path_to_dem+'\'')
-        gs.set_working_dir(path_to_dem)
-    
-        # Run the BreachDepressions tool, specifying the arguments.
-        name = "BreachDepressions"
-        
+        inputProc = str(4) # number of cores to use for TauDEM processes
+               
         # << Define all filenames here >>
+        str_danglepts_path = path_to_dem + '\\' + dem_filename[:-4]+'_wg.tif'
         breach_filename=dem_filename[:-4]+'_breach.tif'
         fel = path_to_dem + '\\' + dem_filename[:-4]+'_breach.tif'
         p = path_to_dem + '\\' + breach_filename[:-4]+'_p.tif'
@@ -249,45 +274,42 @@ def preprocess_dem(str_dem_path, str_danglepts_path):
         ang = path_to_dem + '\\' + breach_filename[:-4]+'_ang.tif'
         dd = path_to_dem + '\\' + breach_filename[:-4]+'_hand.tif'
         
+        
+        # ========== << Call Weight Grid function here >> ==============
+        create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts_path)
+        
+        
+        # ========== << 1. Breach Depressions with GoSpatial/Whitebox Tool >> ==========
+        '''
+        This tool is used to remove the sinks (i.e. topographic depressions and flat areas) from digital elevation models (DEMs) using a highly efficient and flexible breaching, or carving, method.
+        Arg Name: InputDEM, type: string, Description: The input DEM name with file extension
+        Arg Name: OutputFile, type: string, Description: The output filename with file extension
+        Arg Name: MaxDepth, type: float64, Description: The maximum breach channel depth (-1 to ignore)
+        Arg Name: MaxLength, type: int, Description: The maximum length of a breach channel (-1 to ignore)
+        Arg Name: ConstrainedBreaching, type: bool, Description: Use constrained breaching?
+        Arg Name: SubsequentFilling, type: bool, Description: Perform post-breach filling?    
+        '''
+        
+        # Get the gospatial version number
+        print(gs.version())   
+        gs.set_working_dir(path_to_dem)
+    
+        # Run the BreachDepressions tool, specifying the arguments.
+        name = "BreachDepressions"        
         args = [dem_filename, breach_filename, '-1', '-1', 'False', 'False']        
         
         # Run the tool and check the return value
         ret = gs.run_tool(name, args, callback)
         if ret != 0:
             print("ERROR: return value={}".format(ret)) 
-            
-#        # =========== << 2. Fill Pits with TauDEM (OPTIONAL -- Using BreachDepressions instead) ==========
-#        fel = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach.tif'
-#        cmd = 'mpiexec -n ' + inputProc + ' pitremove -z ' + '"' + str_dem_path + '"' + ' -fel ' + '"' + fel + '"'
-##        if considering4way == 'true':
-##            cmd = cmd + ' -4way '
-##        if arcpy.Exists(maskgrid):
-##            cmd = cmd + ' -depmask ' + '"' + mkgr + '"'
-##        if arcpy.Exists(maskgrid) and considering4way == 'true':
-##            cmd = cmd + ' -depmask ' + '"' + mkgr + '"' + ' -4way '
-#        
-##        arcpy.AddMessage("\nCommand Line: "+cmd)
-#        print('Running TauDEM PitRemove...')
-#        os.system(cmd)
-#        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-#        
-#        message = "\n"
-#        for line in process.stdout.readlines():
-#            if isinstance(line, bytes):	    # true in Python 3
-#                line = line.decode()
-#            message = message + line
-#        print(message)
+        
             
 #        # ==============  << 3. D8 FDR with TauDEM >> ================
 #        fel = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach.tif'
 #        fel = path_to_dem + '\\' + breach_filename
 #        p = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach_p.tif'
 #        sd8 = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach_sd8.tif'
-            
-#        fel = r'D:\fernando\HAND\020802\sam_test\020802_fel.tif'
-#        p = r'D:\fernando\HAND\020802\sam_test\020802_p.tif'
-#        sd8 = r'D:\fernando\HAND\020802\sam_test\020802_sd8.tif'           
-                
+                   
         cmd = 'mpiexec -n ' + inputProc + ' D8FlowDir -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
               ' -sd8 ' + '"' + sd8 + '"'
         
@@ -745,6 +767,184 @@ def floodplain_width_reach_buffers(str_streamlines_path, str_fp_path, str_reachi
 #    pd_output.to_csv('/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/channel_width_test.csv')
     
     
+    return
+
+# ===============================================================================
+#  Calculate channel width based on bank pixels and stream line parallel offsets, 
+#  potentially subdividing using Xn's
+#  NOTE: Make this a generic metric calculator by segment?  (ie., sinuosity, etc)
+# =============================================================================== 
+def floodplain_width_fppixels_segments_po(df_coords, str_streamlines_path, str_fpgrid_path, str_reachid, cell_size):
+    
+    print('Floodplain width from bank pixels -- segmented...')
+    
+#    lst_output=[]
+    
+#    j=0   
+#    progBar = self.progressBar
+#    progBar.setVisible(True) 
+    
+    # Create the filename and path for the output file... # NOT OS INDEPENDENT??
+    head, tail = os.path.split(str_streamlines_path)    
+    str_outname = tail[:-4] + '_fpwidth_po_avg.shp'
+    str_outpath = head + '/' + str_outname 
+    
+    gp_coords = df_coords.groupby('linkno')
+
+    schema_output = {'geometry': 'LineString', 'properties': {'width_total':'float', 'width_left':'float', 'width_right':'float'}}
+    
+    # Open the bankpts layer...
+    with rasterio.open(str(str_fpgrid_path)) as ds_fppixels:    
+        
+        # Open the streamlines layer...
+        with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+       
+#            progBar.setRange(0, len(streamlines)) 
+            
+            # Get the crs...
+            streamlines_crs = streamlines.crs                
+            
+            # Open another file to write the width...
+            with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
+                
+                for i_linkno, df_linkno in gp_coords:
+                    
+#                    progBar.setValue(j)
+#                    j+=1                    
+            
+                    i_linkno = int(i_linkno)
+                    
+                    if i_linkno <> 605:
+                        continue
+                    
+                    print('linkno:  {}'.format(i_linkno))
+                    
+                    # testing...
+                    arr_x = df_linkno.x.values
+                    arr_y = df_linkno.y.values    
+                    
+                    # Create a line segment from endpts in df_linkno...
+                    ls = LineString(zip(arr_x, arr_y))                    
+                    
+                    # Successive buffer-mask operations to count bank pixels at certain intervals
+                    lst_left=[]
+                    lst_rt=[]                    
+                    lst_buff=range(cell_size,60,cell_size)
+                    for buff_dist in lst_buff:                                                
+                        
+                        ls_offset_left = ls.parallel_offset(buff_dist, 'left', resolution=16, join_style=2, mitre_limit=1)
+                        ls_offset_rt = ls.parallel_offset(buff_dist, 'right', resolution=16, join_style=2, mitre_limit=1)
+                        
+#                        try:
+#                            arr_os_left = asarray(ls_offset_left)
+#                            arr_os_rt = asarray(ls_offset_rt)
+#                        except:
+#                            continue
+#                        
+#                        # Testing...
+#                        left_pts = MultiPoint(arr_os_left)
+#                        out_left, out_transform = rasterio.tools.mask.mask(ds_fppixels, [mapping(left_pts)], crop=True)
+                        
+                        # Now segment the offsets and do the masking?
+#                        i_step=30
+#                        arr_ind_left = np.arange(0, len(arr_os_left), int(len(arr_os_left)/i_step)) # NOTE: Change the step for longer/shorter segments                        
+#                        arr_ind_rt = np.arange(0, len(arr_os_rt), int(len(arr_os_rt)/i_step))
+                        
+                        ###############################################         
+                        # Left...                                    
+                        int_pts = np.arange(0, ls_offset_left.length, 10)                        
+                        left_pts = MultiPoint([ls_offset_left.interpolate(i_dist) for i_dist in int_pts])  # list of points at distance intervals
+                        left_splitted = split(ls_offset_left, left_pts)
+                        
+                        # Right...
+                        int_pts = np.arange(0, ls_offset_rt.length, 10)                        
+                        rt_pts = MultiPoint([ls_offset_rt.interpolate(i_dist) for i_dist in int_pts])  # list of points at distance intervals
+                        rt_splitted = split(ls_offset_rt, rt_pts)                        
+                        ##############################################
+                        
+#                        # Get points at specified indices...
+#                        left_coords = arr_os_left[arr_ind_left]
+#                        rt_coords = arr_os_rt[arr_ind_rt]
+#                        
+#                        left_pts = MultiPoint(left_coords)
+#                        rt_pts = MultiPoint(rt_coords)
+#                                                
+#                        left_splitted = split(ls_offset_left, left_pts)
+#                        rt_splitted = split(ls_offset_rt, rt_pts)
+                                                
+#                        out_left, out_transform = rasterio.tools.mask.mask(ds_fppixels, [mapping(left_splitted)], crop=True)                         
+#                        out_rt, out_transform = rasterio.tools.mask.mask(ds_fppixels, [mapping(rt_splitted)], crop=True) 
+                        
+                        for i, line_left in enumerate(left_splitted):
+                            out_left, out_transform = rasterio.tools.mask.mask(ds_fppixels, [mapping(line_left)], crop=True) 
+                            output.write({'properties':{'width_total': 1, 'width_left': 1, 'width_right':0}, 'geometry':mapping(line_left)})
+                            
+                            num_pixels_left = len(out_left[out_left==1])
+                            
+                            tpl_left = (buff_dist, i, num_pixels_left)
+                            lst_left.append(tpl_left)
+                            
+                        for i, line_rt in enumerate(rt_splitted):
+                            out_rt, out_transform = rasterio.tools.mask.mask(ds_fppixels, [mapping(line_rt)], crop=True) 
+                            output.write({'properties':{'width_total': 1, 'width_left': 0, 'width_right':1}, 'geometry':mapping(line_rt)})      
+                            
+                            num_pixels_rt = len(out_rt[out_rt==1])
+                            
+                            tpl_rt = (buff_dist, i, num_pixels_rt)
+                            lst_rt.append(tpl_rt)
+                            
+                    break
+                            
+#                    # Now create one big dataframe...
+#                    df_left = pd.DataFrame(lst_left, columns=['buff_dist','step','count'])
+#                    df_rt = pd.DataFrame(lst_rt, columns=['buff_dist','step','count'])
+#                    
+#                    df_test = df_left[df_left['step']==0]
+                    
+                    print('pause')
+        
+                                    
+#                            tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
+#                            lst_tally.append(tpl_out)                    
+#                            df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
+                   
+        
+                        # Avoid division by zero                     
+#                        if df_tally.interval.sum() == 0:
+#                            continue                    
+                        
+#                        # Calculate weighted average                     
+#                        # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
+#                        try:                        
+#                            weighted_avg_left=0 
+#                            weighted_avg_rt=0
+#                        
+#                            avg_left = df_tally[df_tally.interval_left>0].nsmallest(3, 'interval_left').interval_left.mean()                            
+#                            fp_left = np.interp(avg_left, df_tally.buffer, df_tally.interval_left)
+#                            
+#                            avg_rt = df_tally[df_tally.interval_rt>0].nsmallest(3, 'interval_rt').interval_rt.mean()                            
+#                            fp_rt = np.interp(avg_rt, df_tally.buffer, df_tally.interval_rt)                            
+#                            
+##                            weighted_avg_left = np.float(df_tally[df_tally.interval_left>0].nsmallest(1, 'interval_left').buffer.max())
+##                            weighted_avg_rt = np.float(df_tally[df_tally.interval_rt>0].nsmallest(1, 'interval_rt').buffer.max())
+#                            
+#                            n_top=10
+#                            
+#                            for tpl in df_tally[df_tally.interval_left>0].nsmallest(n_top, 'interval_left').itertuples():
+#                                weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally[df_tally.interval_left>0].nsmallest(n_top, 'interval_left').sum().interval_left))
+#
+#                            for tpl in df_tally[df_tally.interval_rt>0].nsmallest(n_top, 'interval_rt').itertuples():
+#                                weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally[df_tally.interval_rt>0].nsmallest(n_top, 'interval_rt').sum().interval_rt))
+#                                
+##                                weighted_avg=weighted_avg*2   # Multiply buffer by 2 to get width
+#                        except:
+##                            weighted_avg=-9999.
+#                            continue
+                        
+                        # Write to an output file here...
+#                        output.write({'properties':{'width_total': fp_left+fp_rt, 'width_left': fp_left, 'width_right': fp_rt}, 'geometry':mapping(ls)})
+#                        output.write({'properties':{'width_total': weighted_avg_left+weighted_avg_rt, 'width_left': weighted_avg_left, 'width_right': weighted_avg_rt}, 'geometry':mapping(ls)})
+                                                    
     return
     
 # ===============================================================================
