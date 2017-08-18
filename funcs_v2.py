@@ -46,6 +46,8 @@ from fiona import collection
 
 import gospatial as gs
 
+np.seterr(over='raise')
+
 #plt.ion()
 
 #from shapely import speedups
@@ -69,6 +71,48 @@ import gospatial as gs
 #    y_rot = np.sin(theta)*(x_orig-x_center) + np.cos(theta)*(y_orig-y_center) + y_center    
 #    return x_rot, y_rot
 
+# lstThisSegmentRows, lstThisSegmentCols, midpt_x, midpt_y, p_fpxnlen
+
+def build_fp_xn(lstThisSegmentRows, lstThisSegmentCols, midPtCol, midPtRow, p_xnlength):
+    
+    slopeCutoffVertical = 20 # another check
+    
+    
+    if (max(lstThisSegmentCols) - min(lstThisSegmentCols) < 3):
+        m_init = 9999.0
+    elif (max(lstThisSegmentRows) - min(lstThisSegmentRows) < 3):
+        m_init = 0.0001
+    else:
+        LinFit = np.polyfit(lstThisSegmentCols,lstThisSegmentRows,1) # NOTE: could just use basic math here instead?!
+        m_init = LinFit[0]
+
+    # Check for zero or infinite slope...
+    if m_init == 0:
+        m_init = 0.0001
+    elif isinf(m_init):
+        m_init = 9999.0
+
+    # Find the orthogonal slope...
+    m_ortho = -1/m_init
+              
+    xn_steps = [-float(p_xnlength),float(p_xnlength)] # just the end points
+
+    lst_xy=[]
+    for r in xn_steps:
+
+        # Make sure it's not too close to vertical...
+        # NOTE X-Y vs. Row-Col here...
+        if (abs(m_ortho) > slopeCutoffVertical):
+            tpl_xy = (midPtCol, midPtRow+r)
+            
+        else:
+            fit_col_ortho = (midPtCol + (float(r)/(sqrt(1 + m_ortho**2))))                       
+            tpl_xy = float(((midPtCol + (float(r)/(sqrt(1 + m_ortho**2)))))), float(((m_ortho)*(fit_col_ortho-midPtCol) + midPtRow))
+        
+        lst_xy.append(tpl_xy)    # A list of two tuple endpts          
+    
+    return lst_xy 
+
 def get_cell_size(str_grid_path):
     
     with rasterio.open(str(str_grid_path)) as ds_grid:
@@ -76,11 +120,11 @@ def get_cell_size(str_grid_path):
         
     return cs_x
 
-def clip_features(str_lines_path, str_dem_path):
-    
-    # Build the output file name...
-    path_to_dem, dem_filename = os.path.split(str_dem_path)
-    output_filename = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'
+def clip_features(str_lines_path, output_filename, str_dem_path):
+    print('Clipping streamlines to site DEM...')
+#    # Build the output file name...
+#    path_to_dem, dem_filename = os.path.split(str_dem_path)
+#    output_filename = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'
     
     # Polygonize the raster DEM with rasterio...    
     with rasterio.open(str(str_dem_path)) as ds_dem:
@@ -113,6 +157,7 @@ def clip_features(str_lines_path, str_dem_path):
                 if shape(line['geometry']).within(poly_shp):
                     dst.write(line)
 
+    return output_filename
 
 # ===============================================================================
 #  Callback for GoSpatial tool messages
@@ -273,12 +318,10 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
         slp = path_to_dem + '\\' + breach_filename[:-4]+'_slp.tif'
         ang = path_to_dem + '\\' + breach_filename[:-4]+'_ang.tif'
         dd = path_to_dem + '\\' + breach_filename[:-4]+'_hand.tif'
-        
-        
+               
         # ========== << Call Weight Grid function here >> ==============
         create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts_path)
-        
-        
+                
         # ========== << 1. Breach Depressions with GoSpatial/Whitebox Tool >> ==========
         '''
         This tool is used to remove the sinks (i.e. topographic depressions and flat areas) from digital elevation models (DEMs) using a highly efficient and flexible breaching, or carving, method.
@@ -288,30 +331,33 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
         Arg Name: MaxLength, type: int, Description: The maximum length of a breach channel (-1 to ignore)
         Arg Name: ConstrainedBreaching, type: bool, Description: Use constrained breaching?
         Arg Name: SubsequentFilling, type: bool, Description: Perform post-breach filling?    
-        '''
-        
+        '''     
         # Get the gospatial version number
-        print(gs.version())   
+#        print(gs.version())   
         gs.set_working_dir(path_to_dem)
     
         # Run the BreachDepressions tool, specifying the arguments.
         name = "BreachDepressions"        
-        args = [dem_filename, breach_filename, '-1', '-1', 'False', 'False']        
+        args = [dem_filename, breach_filename, '-1', '-1', 'False', 'False'] # NOTE:  Make these last four variables accessible to user
         
         # Run the tool and check the return value
         ret = gs.run_tool(name, args, callback)
         if ret != 0:
             print("ERROR: return value={}".format(ret)) 
         
-            
+        # ===============================================================
+        # Hardcode paths (these broke somehow after an update)... NOTE: Allow for user input here?
+        mpipath = r'"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe"'
+        d8flowdir = r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
+        areaD8 = r'"C:\Program Files\TauDEM\TauDEM5Exe\AreaD8.exe"'
+        streamnet = r'"C:\Program Files\TauDEM\TauDEM5Exe\StreamNet.exe"'
+        dinfflowdir = r'"C:\Program Files\TauDEM\TauDEM5Exe\DinfFlowDir.exe"'
+        dinfdistdown = r'"C:\Program Files\TauDEM\TauDEM5Exe\DinfDistDown.exe"'
+        
 #        # ==============  << 3. D8 FDR with TauDEM >> ================
-#        fel = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach.tif'
-#        fel = path_to_dem + '\\' + breach_filename
-#        p = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach_p.tif'
-#        sd8 = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_breach_sd8.tif'
-                   
-        cmd = 'mpiexec -n ' + inputProc + ' D8FlowDir -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
+        cmd = mpipath + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
               ' -sd8 ' + '"' + sd8 + '"'
+        print(cmd)
         
         # Submit command to operating system
         print('Running TauDEM D8 Flow Direction...')
@@ -324,18 +370,14 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
         message = "\n"
         for line in process.stdout.readlines():
             line = line.decode()
-    #            if isinstance(line, bytes):	   # true in Python 3
-    #                line = line.decode()
+#            if isinstance(line, bytes):	   # true in Python 3
+#                line = line.decode()
             message = message + line        
         print(message)            
             
-#        # ============= << 4. D8 FAC with TauDEM >> ================
-##        wtgr = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_wg_rc.tif'
-#        wtgr = str_danglepts_path
-##        ad8 = r'D:\fernando\HAND\020802\sam_test\020802_ad8.tif'
-#        ad8_wg = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8_wg.tif'
-        
-        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+#        # ============= << 4. D8 FAC with TauDEM >> ================        
+#        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+        cmd = mpipath + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
         
         # Submit command to operating system
         print('Running TauDEM D8 FAC (weight grid)...')
@@ -351,8 +393,8 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
         print(message)   
          
         # ============= << 4.a AD8 no weight grid with TauDEM >> ================
-#        ad8_no_wg = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8_no_wg.tif'
-        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
+#        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
+        cmd = mpipath + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
         
         # Submit command to operating system
         print('Running TauDEM D8 FAC (no weights)...')
@@ -367,20 +409,11 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
             message = message + line
         print(message)            
         
-        # ============= << 4.b StreamReachandWatershed with TauDEM >> ================
-#        src = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8.tif'
-#        ad8_no_wg = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ad8_no_wg.tif'
-#        ord_g = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ord.tif'
-#        tree = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_tree'
-#        coord = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_coord'
-#        net = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
-#        w = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_w.tif'
-        
-        cmd = 'mpiexec -n ' + inputProc + ' StreamNet -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
+        # ============= << 4.b StreamReachandWatershed with TauDEM >> ================      
+        cmd = mpipath + ' -n ' + inputProc + '  ' + streamnet + ' -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
               ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
               '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
-              '"'
-        
+              '"'        
         # Submit command to operating system
         print('Running TauDEM Stream Reach and Watershed...')
         os.system(cmd)
@@ -404,14 +437,10 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
         except:
             print('Warning: Problem removing files!')
             pass
-
             
-        # ============= << 5. Dinf with TauDEM >> =============
-#        slp = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_slp.tif'
-#        ang = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_ang.tif'
-                
+        # ============= << 5. Dinf with TauDEM >> =============                
         print('Running TauDEM Dinfinity...')        
-        cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
+        cmd = mpipath + ' -n ' + inputProc + '  ' + dinfflowdir + ' -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
               ' -slp ' + '"' + slp + '"'
         
         # Submit command to operating system
@@ -430,13 +459,11 @@ def preprocess_dem(str_dem_path, str_streamlines_path):
         print(message)            
         
         # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
-#        dd = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_dd.tif'
-
         distmeth = 'v'
         statmeth = 'ave'
         
         print('Running TauDEM Dinf Distance Down...') # Using Breached DEM here
-        cmd = 'mpiexec -n ' + inputProc + ' DinfDistDown -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
+        cmd = mpipath + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
               ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
     
         # Submit command to operating system
@@ -559,6 +586,84 @@ def get_feature_count(str_shp_path):
         i_count=len(features)
         
     return i_count
+
+# ===============================================================================
+#  Calculate FP width using 2D Xn's (buffered Xn lines)
+#  Requires existing cross section file
+# =============================================================================== 
+def floodplain_width_2D_xns(str_xns_path, str_grid_path, buff_dist):
+    
+    ###### TESTING
+    str_streamspath = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_breach_net.shp'
+    ######
+           
+    # Open the dem...
+    with rasterio.open(str(str_grid_path)) as ds_grid:
+        
+        # Open the xn layer...
+        with fiona.open(np.str(str_xns_path), 'r') as xns: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+
+            # Create the filename and path for the output file... # NOT OS INDEPENDENT??
+            head, tail = os.path.split(str_xns_path)    
+            str_outname = tail[:-4] + '_streams_fpwidth.shp'
+            str_outpath = head + '/' + str_outname 
+       
+            # Get the crs...
+            schema = xns.schema.copy()
+            schema['properties']['fp_width'] = 'float'
+           
+            lst_lyr=[]
+            with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema, xns.crs) as output:  
+                with fiona.open(str_streamspath, 'r') as streams:
+                    
+                    for line in streams:                
+                        lst_lyr.append(shape(line['geometry']))                
+            
+                    lyr = MultiLineString(lst_lyr)
+    
+                    for line in xns:    
+        
+        #                test_id=777
+        #                if line['properties']['linkno'] <> test_id:
+        #                    continue
+                        
+                        print(line['properties']['linkno'])
+                        
+                        # Buffer each feature...
+                        geom = shape(line['geometry'])   # Convert to shapely geometry to operate on it
+                                            
+                        geom_buff = geom.buffer(buff_dist,cap_style=2)
+                        buff = mapping(geom_buff)           
+                                    
+                        # Mask the bankpts file for each feature...
+                        out_image, out_transform = rasterio.tools.mask.mask(ds_grid, [buff], crop=True)
+                        
+                        # Count the number of pixels in the buffered Xn...
+                        num_pixels = len(out_image[out_image==1])
+                        
+        #                w[w<0]=9999. # handle no data vals?
+                        
+                        # Calculate area of FP pixels...
+                        area_pixels = num_pixels*(ds_grid.res[0]**2) # get grid resolution               
+                        
+                        # Calculate width by stretching it along the length of the 2D Xn...
+                        fp_width = area_pixels/(buff_dist*2)
+                        
+                        # Intersect buffer polygon with streamlines...
+                        line_seg = geom_buff.intersection(lyr)
+                        
+                        output.write({'properties':{'linkno':0,'fp_width':fp_width}, 'geometry':mapping(line_seg)})
+                                                
+#                        line['properties']['fp_width'] = fp_width
+                        # 'properties':{'width_total': 1, 'width_left': 0, 'width_right':1}
+#                        for ls in line_seg:
+#                            output.write({'properties':{'linkno':0,'fp_width':fp_width}, 'geometry':mapping(ls)})
+
+        # Remove the original FP Xn file?
+        os.remove(str_xns_path)
+                    
+    return
+
 
 # ===============================================================================
 #  Calculate floodplain width based on a HAND slice and stream line buffers of 
@@ -952,171 +1057,226 @@ def floodplain_width_fppixels_segments_po(df_coords, str_streamlines_path, str_f
 #  potentially subdividing using Xn's
 #  NOTE: Make this a generic metric calculator by segment?  (ie., sinuosity, etc)
 # =============================================================================== 
-def channel_width_bankpixels_segments_po(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size):
+def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path):
     
-    print('Channel width from bank pixels -- segmented...')
-    
-#    lst_output=[]
-    
+    print('Channel width from bank pixels -- segmented reaches...')
+
 #    j=0   
 #    progBar = self.progressBar
 #    progBar.setVisible(True) 
     
+    fp_height = 2.0 # How to get this?  By reach?
+    p_fitlength=30  # For FP Xn's
+    
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
     head, tail = os.path.split(str_streamlines_path)    
-    str_outname = tail[:-4] + '_chwidth_po.shp'
+    str_outname = tail[:-4] + '_ch_fp_width_po.shp'
     str_outpath = head + '/' + str_outname 
     
     gp_coords = df_coords.groupby('linkno')
     
 #    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
-    schema_output = {'geometry': 'LineString', 'properties': {'width_total':'float', 'width_left':'float', 'width_right':'float', 'sinuosity':'float'}}
+    schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float', 'dist_sl':'float', 'dist':'float', 'sinuosity':'float', 'fp_width':'float'}}
     
-    # Open the bankpts layer...
-    with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
+    # Access the floodplain grid...
+    with rasterio.open(str(str_hand_path)) as ds_hand:
         
-        # Open the streamlines layer...
-        with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
-       
-#            progBar.setRange(0, len(streamlines)) 
+        # Access the bankpts layer...
+        with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
             
-            # Get the crs...
-            streamlines_crs = streamlines.crs                
-#                streamlines_schema = streamlines.schema.copy()
-#                streamlines_schema['properties']['chan_width'] = 'float'
-#                streamlines_schema['properties']['sinuosity'] = 'float'
-            
-            # Open another file to write the width...
-            with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
+            # Access the streamlines layer...
+            with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+           
+    #            progBar.setRange(0, len(streamlines)) 
                 
-                for i_linkno, df_linkno in gp_coords:
+                # Get the crs...
+                streamlines_crs = streamlines.crs                
+                
+                # Open another file to write the width...
+                with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
                     
-#                    progBar.setValue(j)
-#                    j+=1                    
-            
-                    i_linkno = int(i_linkno)
-                    
-#                        if i_linkno > 0:
-#                            break
-                    
-                    print('linkno:  {}'.format(i_linkno))
-          
-                    # Now loop over df_linkno
-                    # Set up index array for looping...
-                    arr_ind = np.arange(0, len(df_linkno.index)+1, 10) # NOTE: Change the step for resolution?
-                    
-                    for i, indx in enumerate(arr_ind):
+                    for i_linkno, df_linkno in gp_coords:
                         
-#                            if indx == 110:
-#                                print('pause')
+    #                    progBar.setValue(j)
+    #                    j+=1                    
+                
+                        i_linkno = int(i_linkno)
+                        max_indx = len(df_linkno.index) - 1
                         
-                        if i>0: indx = indx-1
-                        try:
-                            arr_x = df_linkno.x.iloc[indx:arr_ind[i+1]].values
-                            arr_y = df_linkno.y.iloc[indx:arr_ind[i+1]].values            
-                        except:
-                            break
-
-                        # Calculate straight line distance...
-                        dist_sl = np.sqrt((arr_x[0] - arr_x[len(arr_x)-1])**2 + (arr_y[0] - arr_y[len(arr_y)-1])**2)                     
+#                        if i_linkno <> 74:
+#                            continue
+                        
+                        print('linkno:  {}'.format(i_linkno))
               
-                        # Create a line segment from endpts in df_linkno...
-                        ls = LineString(zip(arr_x, arr_y))
+                        # << Analysis by reach segments >>
+                        # Set up index array to split up df_linkno into segments (these dictate the reach segment length)...
+                        # NOTE:  Reach might not be long enough to break up
+                        i_step=30
+                        arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
+                        lst_dfsegs = np.split(df_linkno, arr_ind)
                         
-                        dist = ls.length
-                        
-                        sinuosity = dist/dist_sl # ratio of sinuous length to straight line length
-                        
-                        lst_tally=[]
-                        
-                        # Buffer each feature...
-#                            geom = shape(ls)   # Convert to shapely geometry to operate on it
-                               
-                        # Successive buffer-mask operations to count bank pixels at certain intervals
-#                            prev_val_left=0
-#                            prev_val_rt=0
-                        lst_buff=range(cell_size,30,cell_size)
-                        for buff_dist in lst_buff:                                                            
+                        for df in lst_dfsegs:
                             
-                            ls_offset_left = ls.parallel_offset(buff_dist, 'left')
-                            ls_offset_rt = ls.parallel_offset(buff_dist, 'right')
-#                                ls_offset_left
-                            
-#                            # Write out buffer polygon(s)...NOTE:  Could write out ind
-#                            with fiona.open(r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\buffer.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
-#                                buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
-#                            sys.exit()                    
-                                        
-                            # Mask the bankpts file for each feature...
-#                                out_image, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [buff], crop=True) 
-                                        
-#                                print(indx, buff_dist)
-                            
-#                                if (indx==79) and (buff_dist==24):
-#                                    print('pause')
-#                                    continue
+                            arr_x = df.x.values
+                            arr_y = df.y.values
+                        
+#                        for i, indx in enumerate(arr_ind):
+#                            
+##                            if i>0: indx = indx-1
+#                            try:
+#                                arr_x = df_linkno.x.iloc[indx:arr_ind[i+1]].values
+#                                arr_y = df_linkno.y.iloc[indx:arr_ind[i+1]].values            
+#                            except:
+##                                arr_x = df_linkno.x.iloc[indx:arr_ind[-1]].values
+##                                arr_y = df_linkno.y.iloc[indx:arr_ind[-1]].values                                
+#                                break
                             try:
-                                out_left, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)   
-                                out_rt, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
+                                # Calculate straight line distance...
+                                dist_sl = np.sqrt((arr_x[0] - arr_x[-1])**2 + (arr_y[0] - arr_y[-1])**2)                     
                             except:
-                                continue
+                                print('Error calculated straight line distance')
+                                break
                             
-                            num_pixels_left = len(out_left[out_left>0])
-                            num_pixels_rt = len(out_rt[out_rt>0])
+                            try:
+                                # Create a line segment from endpts in df_linkno...
+                                ls = LineString(zip(arr_x, arr_y))
                             
-#                                # You want the number of pixels gained by each interval...                    
-#                                interval_left = num_pixels_left-prev_val_left                    
-#                                prev_val_left = num_pixels_left
-#                                
-#                                interval_rt = num_pixels_rt-prev_val_rt                    
-#                                prev_val_rt = num_pixels_rt                                
-                            
-                            tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
-                            lst_tally.append(tpl_out)                    
-                            df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
-                   
-        
-                        # Avoid division by zero                     
-#                        if df_tally.interval.sum() == 0:
-#                            continue                    
-                        
-                        # Calculate weighted average                     
-                        # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
-                        try:                        
-                            weighted_avg_left=0 
-                            weighted_avg_rt=0
-                            n_top=2
-                            for tpl in df_tally.nlargest(n_top, 'interval_left').iloc[0:2].itertuples():
-                                weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))
+                                dist = ls.length
+                                
+                                sinuosity = dist/dist_sl # ratio of sinuous length to straight line length
+                                
+                                lst_tally=[]                            
 
-                            for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
-                                weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))
+                                # Successive buffer-mask operations to count bank pixels at certain intervals
+                                lst_buff=range(cell_size,30,cell_size)
+                                try:
+                                    for buff_dist in lst_buff:                                                            
+                                        
+                                        # Watch out for potential geometry errors here...
+                                        ls_offset_left = ls.parallel_offset(buff_dist, 'left')
+                                        ls_offset_rt = ls.parallel_offset(buff_dist, 'right')   
+            #                                ls_offset_left
+                                        
+            #                            # Write out buffer polygon(s)...NOTE:  Could write out ind
+            #                            with fiona.open(r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\buffer.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
+            #                                buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
+            #                            sys.exit()                    
+                                                    
+                                        # Mask the bankpts file for each feature...
+            #                                out_image, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [buff], crop=True) 
+                                                    
+            #                                print(indx, buff_dist)
+                                        
+            #                                if (indx==79) and (buff_dist==24):
+            #                                    print('pause')
+            #                                    continue
+                                        
+                                        out_left, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)   
+                                        out_rt, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
+                                        
+                                        num_pixels_left = len(out_left[out_left>0])
+                                        num_pixels_rt = len(out_rt[out_rt>0])
+                                        
+            #                                # You want the number of pixels gained by each interval...                    
+                                        tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
+                                        lst_tally.append(tpl_out)                    
+                                        df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
+                                except:
+                                    print('Error: Parallel offset buffer')
+                                    break
                                 
-#                                weighted_avg=weighted_avg*2   # Multiply buffer by 2 to get width
-                        except:
-#                            weighted_avg=-9999.
-                            continue
-                        
-                        # Write to an output file here...
-                        output.write({'properties':{'width_total': weighted_avg_left+weighted_avg_rt, 'width_left': weighted_avg_left, 'width_right': weighted_avg_rt, 'sinuosity': sinuosity}, 'geometry':mapping(ls)})
-                                                
-#                    if i_linkno > 10:
-#                        break
-                    
-#                    # To save the output...    
-#                    tpl_output = (line['properties'][str_reachid],weighted_avg)                    
-#                    lst_output.append(tpl_output)
-                                
-                    # FOR TESTING...
-    #                if line['properties'][str_reachid] == 13:                                        
-    #                    print('pause')     
-#                    df_linkno.plot.bar(x='buffer', y='interval', title='linkno: {} | width: {}'.format(line['properties'][str_reachid], weighted_avg))                    
-#                    sys.exit()
+                            except:
+                                print('buffer exception pause')
+                                # There may be errors associated with the buffer geometry.  Just skip it if so?
+                                continue
+                       
+                            # Avoid division by zero                     
+    #                        if df_tally.interval.sum() == 0:
+    #                            continue                    
+                            
+                            # Calculate weighted average                     
+                            # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
+                            try:                        
+                                weighted_avg_left=0 
+                                weighted_avg_rt=0
+                                n_top=2
+                                for tpl in df_tally.nlargest(n_top, 'interval_left').iloc[0:2].itertuples():
+                                    weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))
     
-#    # Write to a csv...
-#    pd_output = pd.DataFrame(lst_output)    
-#    pd_output.to_csv('/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/channel_width_test.csv')
-     
+                                for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
+                                    weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))
+                                    
+    #                                weighted_avg=weighted_avg*2   # Multiply buffer by 2 to get width
+                            except:
+    #                            weighted_avg=-9999.
+                                print('Error calculating weighted average of buffer distance')
+                                continue                                                                                                                        
+                            
+                            # << FP Width Here >>                            
+                            midpt_indx = int(len(arr_x)/2)
+                            
+                            lstThisSegmentRows = []
+                            lstThisSegmentCols = []                            
+                    
+                            if (midpt_indx - p_fitlength < 0):
+                                lstThisSegmentRows.append(df_linkno.y.iloc[0])
+                                lstThisSegmentRows.append(df_linkno.y.iloc[0])
+                                lstThisSegmentCols.append(df_linkno.x.iloc[0])
+                                lstThisSegmentCols.append(df_linkno.x.iloc[0])
+                                
+                            elif (midpt_indx + p_fitlength >= len(df_linkno.index)):
+                                lstThisSegmentRows.append(df_linkno.y.iloc[max_indx])
+                                lstThisSegmentRows.append(df_linkno.y.iloc[max_indx])
+                                lstThisSegmentCols.append(df_linkno.x.iloc[max_indx])
+                                lstThisSegmentCols.append(df_linkno.x.iloc[max_indx])                                
+                                
+                            else:                    
+                                lstThisSegmentRows.append(df_linkno.y.iloc[midpt_indx - p_fitlength])
+                                lstThisSegmentRows.append(df_linkno.y.iloc[midpt_indx + p_fitlength])
+                                lstThisSegmentCols.append(df_linkno.x.iloc[midpt_indx - p_fitlength])
+                                lstThisSegmentCols.append(df_linkno.x.iloc[midpt_indx + p_fitlength])                            
+                            
+                            # midPt x and y...
+                            midpt_x = df_linkno.x.iloc[midpt_indx]
+                            midpt_y = df_linkno.y.iloc[midpt_indx]                              
+                            
+                            # Send it the endpts of what you to draw a perpendicular line to...
+                            lst_xy = build_fp_xn(lstThisSegmentRows, lstThisSegmentCols, midpt_x, midpt_y, p_fpxnlen)
+                            
+                            try:                               
+                                # Turn the list of tuples into a linestring
+                                fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
+                            except:
+                                print('Error converting Xn endpts to LineString')
+                                continue
+                                
+                                
+                            # Do the buffering, etc          
+                            fp_buff_dist=dist_sl/2 # have of the line segment straight line distance
+                            geom_fpls_buff = fp_ls.buffer(fp_buff_dist, cap_style=2)
+                            buff = mapping(geom_fpls_buff)
+                            
+                            # Mask the bankpts file for each feature...
+                            out_image, out_transform = rasterio.tools.mask.mask(ds_hand, [buff], crop=True)
+                            
+                            # Count the number of pixels in the buffered Xn...
+#                            num_pixels = len(out_image[out_image==1]) # this assumes HAND has already been sliced
+                            num_pixels = len(out_image[(out_image<=fp_height)&(out_image>=0.)])
+                             
+                            # Calculate area of FP pixels...
+                            area_pixels = num_pixels*(ds_hand.res[0]**2) # get grid resolution               
+                            
+                            # Calculate width by stretching it along the length of the 2D Xn...
+                            fp_width = area_pixels/(fp_buff_dist*2)                             
+    
+                            # Subtract channel width from fp width...
+                            fp_width = fp_width - (weighted_avg_left+weighted_avg_rt)
+                            
+                            if fp_width<0.: fp_width = 0 # don't have negatives                            
+                            
+                            # Write to an output file here...
+                            output.write({'properties':{'linkno':i_linkno, 'ch_wid_total': weighted_avg_left+weighted_avg_rt, 'ch_wid_1': weighted_avg_left, 'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl, 'dist':dist, 'sinuosity': sinuosity, 'fp_width':fp_width}, 'geometry':mapping(ls)})                            
+
     return
 
 # ===============================================================================
@@ -2424,15 +2584,29 @@ def bankpixels_from_openness_window(df_coords, str_openness_path, str_bankpixels
 # ===============================================================================
 #  Searchable window with center pixel defined by get_stream_coords_from_features
 # ===============================================================================  
-def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path):
+def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size):
     
     print('Bank pixels from curvature windows...')
     
     # Convert df_coords x-y to row-col via DEM affine
     # Loop over center row-col pairs accessing the window
     # Now loop over the linknos to get access grid by window...
+    
+    # << PARAMETERS >>
+    cell_size=int(cell_size)
+    
+    # 3 m...
     w_height=20 # number of rows
     w_width=20  # number of columns
+    buff=3 # number of cells    
+    curve_thresh=0.30 # good for 3m DEM?    
+    
+    # 10 m...
+#    w_height=20 # number of rows
+#    w_width=20  # number of columns
+#    buff=3 # number of cells    
+#    curve_thresh=0.30 # good for 3m and 10m DEM?     
+    
 #    j=0
     
 #    lst_linknos=[]
@@ -2445,97 +2619,114 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
 #    progBar = self.progressBar
 #    progBar.setVisible(True)   
     
-    with rasterio.open(str_dem_path) as ds_dem:
+    try:
         
-#        nodata_val = ds_dem.nodata
+        with rasterio.open(str_dem_path) as ds_dem:
+            
+    #        nodata_val = ds_dem.nodata
+        
+            # Transform to pixel space
+    #        df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])
+            df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])   
+            
+            df_coords[['row','col']] = df_coords[['row','col']].astype(np.int32)  
+            df_coords.drop_duplicates(['col','row'], inplace=True) # rounding to integer
+            total_len = len(df_coords.index)
+            
+            out_meta = ds_dem.meta.copy()  
     
-        # Transform to pixel space
-#        df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])
-        df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])   
-        
-        df_coords[['row','col']] = df_coords[['row','col']].astype(np.int32)  
-        df_coords.drop_duplicates(['col','row'], inplace=True) # rounding to integer
-        
-        out_meta = ds_dem.meta.copy()  
-        buff=3 # cell size?
-        cell_size=3
-        curve_thresh=0.30 # good for 3m DEM?
-        
-        arr_bankpts=np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
-#        arr_bankpts=out_meta['nodata']
-        
-#        progBar.setRange(0, len(df_coords.index)) 
-        
-        for tpl_row in df_coords.itertuples():
             
-#            progBar.setValue(j)
-            j+=1
+            arr_bankpts=np.zeros([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
+    #        arr_bankpts=out_meta['nodata']
             
-#            print(tpl_row.linkno)
+    #        progBar.setRange(0, len(df_coords.index)) 
             
-            if (tpl_row.linkno == 111) or (tpl_row.linkno == 106) or (tpl_row.linkno == 139):
-                continue
-            
-            row_min = np.int(tpl_row.row - np.int(w_height/2))
-            row_max = np.int(tpl_row.row + np.int(w_height/2))
-            col_min = np.int(tpl_row.col - np.int(w_width/2))
-            col_max = np.int(tpl_row.col + np.int(w_width/2))            
-            
-            # Now get the DEM specified by this window as a numpy array...
-            w = ds_dem.read(1, window=((row_min, row_max),(col_min, col_max))) 
-                            
-            # Then extract the internal part of the window that contains the rotated window??
-            
-#            w_laplace = ndimage.filters.laplace(w)
-#            w_sobel_x = ndimage.sobel(w, axis=0, mode='constant')
-#            w_sobel_y = ndimage.sobel(w, axis=1, mode='constant')
-#            w_sobel = np.hypot(w_sobel_x, w_sobel_y)
-            
-#            w[w==out_meta['nodata']] = 0
-            
-            if np.size(w) > 9: # make sure a window of appropriate size was returned from the DEM
-                            
-                # Calculate curvature...
-#                w_dw_x, w_dw_y = np.gradient(w, cell_size)
-#                w_ddw_x, temp1 = np.gradient(w_dw_x, cell_size)
-#                temp2, w_ddw_y = np.gradient(w_dw_y, cell_size)            
-#                w_curve = w_ddw_x + w_ddw_y
-#                del temp1, temp2, w_dw_x, w_dw_y, w_ddw_x, w_ddw_y
-                            
-                Zy, Zx = np.gradient(w, cell_size)
-                Zxy, Zxx = np.gradient(Zx, cell_size)
-                Zyy, _ = np.gradient(Zy, cell_size)                            
+            for tpl_row in df_coords.itertuples():
                 
-#                # OR, gaussian curvature? (http://stackoverflow.com/questions/11317579/surface-curvature-matlab-equivalent-in-python)
-#                w_curve = (Zxx * Zyy - (Zxy ** 2)) /  (1 + (Zx ** 2) + (Zy **2)) ** 2
+    #            if j > 250000:
+    #                break
                 
-                # OR, mean curvature...
-                w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
-                w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
+    #            progBar.setValue(j)
+                j+=1
                 
-                w_curve[w_curve<np.max(w_curve)*curve_thresh] = out_meta['nodata'] 
-#                w_curve = np.ma.masked_less(w_curve, np.max(w_curve)*0.40) # for plotting?
+                print('{} | {} -- {}'.format(tpl_row.linkno, j, total_len))
                 
-                arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
+    #            if (tpl_row.linkno == 111) or (tpl_row.linkno == 106) or (tpl_row.linkno == 139):
+    #                continue
                 
-#                if tpl_row.linkno == 8574501:
-#                    fig, ax = plt.subplots()
-#                    im = ax.imshow(w_curve, cmap='gist_rainbow')
-#                    fig.colorbar(im, orientation='vertical')
-#                    plt.show()     
-#                    break
+                row_min = np.int(tpl_row.row - np.int(w_height/2))
+                row_max = np.int(tpl_row.row + np.int(w_height/2))
+                col_min = np.int(tpl_row.col - np.int(w_width/2))
+                col_max = np.int(tpl_row.col + np.int(w_width/2))            
+                
+                # Now get the DEM specified by this window as a numpy array...
+                w = ds_dem.read(1, window=((row_min, row_max),(col_min, col_max))) 
+                                
+                # Then extract the internal part of the window that contains the rotated window??
+                
+    #            w_laplace = ndimage.filters.laplace(w)
+    #            w_sobel_x = ndimage.sobel(w, axis=0, mode='constant')
+    #            w_sobel_y = ndimage.sobel(w, axis=1, mode='constant')
+    #            w_sobel = np.hypot(w_sobel_x, w_sobel_y)
+                
+                w[w>9999999.0] = 0.0 # NoData values may have been corrupted by preprocessing?
+                
+                if np.size(w) > 9: # make sure a window of appropriate size was returned from the DEM
+    
+                    # Calculate curvature...
+    #                w_dw_x, w_dw_y = np.gradient(w, cell_size)
+    #                w_ddw_x, temp1 = np.gradient(w_dw_x, cell_size)
+    #                temp2, w_ddw_y = np.gradient(w_dw_y, cell_size)            
+    #                w_curve = w_ddw_x + w_ddw_y
+    #                del temp1, temp2, w_dw_x, w_dw_y, w_ddw_x, w_ddw_y
+                                
+                    Zy, Zx = np.gradient(w, cell_size)
+                    Zxy, Zxx = np.gradient(Zx, cell_size)
+                    Zyy, _ = np.gradient(Zy, cell_size)                            
                     
-#                w_laplace = ndimage.filters.laplace(w_curve)    
-#    #            w_laplace = np.ma.masked_less(w_laplace, np.max(w_laplace)*0.30)  # 0.30 for 3 m seems to work well  
-#                w_laplace[w_laplace<np.max(w_laplace)*0.30] = out_meta['nodata']               
-#                arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_laplace[buff:w_height-buff, buff:w_width-buff]
+    #                # OR, gaussian curvature? (http://stackoverflow.com/questions/11317579/surface-curvature-matlab-equivalent-in-python)
+    #                w_curve = (Zxx * Zyy - (Zxy ** 2)) /  (1 + (Zx ** 2) + (Zy **2)) ** 2
+                    
+                    try:
+                        # OR, mean curvature...
+                        w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
+                        w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
+                    except:
+                        print('pause')
 
-
-        arr_bankpts[arr_bankpts<=0.] = out_meta['nodata']            
-        
-        print('Writing bankpts .tif...')
-        with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
-            dest.write(arr_bankpts, indexes=1)
+                    
+                    w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
+                    
+                    w_curve[w_curve<-99999999.] = 0.
+                    w_curve[w_curve>99999999.] = 0.
+    #                w_curve = np.ma.masked_less(w_curve, np.max(w_curve)*0.40) # for plotting?
+                    
+                    arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
+                    
+    #                if tpl_row.linkno == 8574501:
+    #                    fig, ax = plt.subplots()
+    #                    im = ax.imshow(w_curve, cmap='gist_rainbow')
+    #                    fig.colorbar(im, orientation='vertical')
+    #                    plt.show()     
+    #                    break
+                        
+    #                w_laplace = ndimage.filters.laplace(w_curve)    
+    #    #            w_laplace = np.ma.masked_less(w_laplace, np.max(w_laplace)*0.30)  # 0.30 for 3 m seems to work well  
+    #                w_laplace[w_laplace<np.max(w_laplace)*0.30] = out_meta['nodata']               
+    #                arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_laplace[buff:w_height-buff, buff:w_width-buff]
+    
+    
+#            arr_bankpts[arr_bankpts<0.] = np.nan
+#            arr_bankpts[arr_bankpts>999999999990.] = out_meta['nodata']
+#            arr_bankpts[arr_bankpts>999999999.] = np.nan 
+            
+            print('Writing bankpts .tif...')
+            with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
+                dest.write(arr_bankpts, indexes=1)
+                
+                
+    except Exception as e:
+        print('\r\nError in bankpixels_from_curvature_window. Exception: {} \n'.format(e))        
             
 #        df_dist = pd.DataFrame(lst_dist)
     
@@ -3288,17 +3479,18 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
 #                # ======================================    
                 
             # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
-            i_order = df_linkno.order.iloc[0]
-            if i_order == 1:
-                p_xnlength=20
-            elif i_order == 2:
-                p_xnlength=23
-            elif i_order == 3:
-                p_xnlength=40
-            elif i_order == 4:
-                p_xnlength=50 
-            elif i_order == 5:
-                p_xnlength=60                    
+            if not(bool_isvalley):
+                i_order = df_linkno.order.iloc[0]
+                if i_order == 1:
+                    p_xnlength=20
+                elif i_order == 2:
+                    p_xnlength=23
+                elif i_order == 3:
+                    p_xnlength=40
+                elif i_order == 4:
+                    p_xnlength=50 
+                elif i_order == 5:
+                    p_xnlength=60                    
     
             reach_len = len(df_linkno['x'])
         
@@ -3334,7 +3526,6 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                     LinFit = np.polyfit(lstThisSegmentCols,lstThisSegmentRows,1) # NOTE: could just use basic math here instead?!
                     m_init = LinFit[0]
         
-        
                 # Check for zero or infinite slope...
                 if m_init == 0:
                     m_init = 0.0001
@@ -3352,16 +3543,11 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                     # Make sure it's not too close to vertical...
                     # NOTE X-Y vs. Row-Col here...
                     if (abs(m_ortho) > slopeCutoffVertical):
-#                        fit_col_ortho.append(midPtCol)
-#                        fit_row_ortho.append(midPtRow+r)
                         tpl_xy = (midPtCol, midPtRow+r)
                         
                     else:
-                        fit_col_ortho = (midPtCol + (float(r)/(sqrt(1 + m_ortho**2))))
-#                        fit_row_ortho.append((m_ortho)*(fit_col_ortho[-1]-midPtCol) + midPtRow)
-                        
+                        fit_col_ortho = (midPtCol + (float(r)/(sqrt(1 + m_ortho**2))))                       
                         tpl_xy = float(((midPtCol + (float(r)/(sqrt(1 + m_ortho**2)))))), float(((m_ortho)*(fit_col_ortho-midPtCol) + midPtRow))
-#                        tpl_xy = ((midPtCol + (float(r)/(sqrt(1 + m_ortho**2)))), ((m_ortho)*(fit_col_ortho-midPtCol) + midPtRow))
                     
                     lst_xy.append(tpl_xy)
                          
@@ -3391,7 +3577,7 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
     
     print('Getting stream coords from features...')
  
-    p_interp_spacing = cell_size #3 # larger numbers would simulate a more smoothed reach | NOTE: Hardcode this = grid resolution?
+    p_interp_spacing = int(cell_size) #3 # larger numbers would simulate a more smoothed reach | NOTE: Hardcode this = grid resolution?
     j=0 # prog bar
     
     # Open the streamlines shapefile...
@@ -3425,8 +3611,8 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
 #               self.emit(QtCore.SIGNAL("update(int)"), int(100*len(streamlines)/j)) 
            
            i_linkno = line['properties'][str_reachid]           
-#           i_order = line['properties'][str_orderid]
-           i_order=1
+           i_order = line['properties'][str_orderid]
+#           i_order=1
            
            print('{} | {}'.format(i_linkno, j))
            
@@ -3449,7 +3635,7 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
                    lst_linkno.append(i_linkno)   
                    lst_order.append(i_order)
            
-               df_coords = pd.DataFrame({'x':lst_x, 'y':lst_y, 'linkno':lst_linkno, 'order':lst_order})
+        df_coords = pd.DataFrame({'x':lst_x, 'y':lst_y, 'linkno':lst_linkno, 'order':lst_order})
 #               df_coords.set_index('linkno', inplace=True)  
                
 #           if j == 100:
