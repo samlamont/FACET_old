@@ -327,7 +327,9 @@ if __name__ == '__main__':
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM.tif'
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503010802_MahantangoCreek\DEM.tif'    
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\DEM_utm18.tif'
-    str_dem_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach.tif'
+#    str_dem_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach.tif'
+    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040103\02040103.dep'
+#    str_dem_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003.dep'
     
     ## << VECTOR STREAMLINES (net) >>  
 ##    str_net_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/Network04.shp'
@@ -345,7 +347,9 @@ if __name__ == '__main__':
 #    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\dr3m_net_raw.shp'
 #    str_net_in_path = r'D:\fernando\HAND\020802\020802-flows-utm.shp'
 #    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
-    str_net_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_net.shp'
+#    str_net_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_net.shp'
+    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040103\02040103_clip_utm18.shp'
+#    str_net_in_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003\121003-flows.shp'
       
     ## << BANK PIXELS >>   
 ##    str_bankpixels_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/bank_pixels_02050205_H.tif'
@@ -353,7 +357,7 @@ if __name__ == '__main__':
 #    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
 #    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\bankpixels_raw_dem.tif'
 #    str_bankpixels_path =r'D:\fernando\HAND\020802\0202802_utm_bankpixels.tif'
-    str_bankpixels_path =r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_bankpixels.tif'
+#    str_bankpixels_path =r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_bankpixels.tif'
     
     ## << BANK POINTS >>    
 #    str_bankpts_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_bankpoints.shp'
@@ -378,7 +382,7 @@ if __name__ == '__main__':
 #    str_hand_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_hand.tif'
 #    str_hand_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMhand.tif'
 #    str_hand_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_hand.tif'
-    str_hand_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_hand.tif'
+#    str_hand_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_hand.tif'
     
     ## << SHEDS >>
 #    str_sheds_path = '/home/sam.lamont/USGSChannelFPMetrics/testing/dr3m_sheds_diss2.shp'   
@@ -414,7 +418,7 @@ if __name__ == '__main__':
     p_fpxnlen = 100 # meters (if UTM) ??
     
     # << Get cell size directly from grid >>
-    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
+#    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
   
 ##    # << Build Strealine Coordinates >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
@@ -423,11 +427,11 @@ if __name__ == '__main__':
 #    df_coords.to_csv('df_coords_DifficultRun.csv') # just for testing
 #    df_coords.to_csv('df_coords_020802.csv') # just for testing
     
-    print('NOTE:  Reading pre-calculated csv file...')
-    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
+#    print('NOTE:  Reading pre-calculated csv file...')
+#    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )
 #    df_coords = pd.read_csv('df_coords_020802.csv', )    
-    streamlines_crs = {'init': u'epsg:26918'}
+#    streamlines_crs = {'init': u'epsg:26918'}
 #   
 #    # << Find bank pixels using moving window along streamline >>
 #    funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size) 
@@ -437,7 +441,7 @@ if __name__ == '__main__':
 ##    # << Channel Width via Bank Pixels >>    
 #    funcs_v2.channel_width_bankpixels(str_net_path, str_bankpixels_path, str_reachid, cell_size)    
 #    funcs_v2.channel_width_bankpixels_segments(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
-    funcs_v2.channel_and_fp_width_bankpixels_segments_po(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path)
+#    funcs_v2.channel_and_fp_width_bankpixels_segments_po(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path)
     
 #     << FLOODPLAIN WIDTH >> 
 #    buff_dist = 40
@@ -493,12 +497,12 @@ if __name__ == '__main__':
     # (1) Clip original streamlines layer (NHD hi-res 4 digit HUC to DEM of interest)...     
     # Build the output streamlines file name...
 #    path_to_dem, dem_filename = os.path.split(str_dem_path)
-#    str_site_nhdhires_path = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp' 
+#    str_output_nhdhires_path = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp' 
     
-#    funcs_v2.clip_features(str_net_in_path, str_site_nhdhires_path, str_dem_path)     
+#    funcs_v2.clip_features(str_net_in_path, str_output_nhdhires_path, str_dem_path)     
     
     # (2) Do all Whitebox and TauDEM functions including HAND based on output 
-#    funcs_v2.preprocess_dem(str_dem_path, str_site_nhdhires_path)
+    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path)
     
 
     
