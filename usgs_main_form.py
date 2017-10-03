@@ -328,8 +328,9 @@ if __name__ == '__main__':
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503010802_MahantangoCreek\DEM.tif'    
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\DEM_utm18.tif'
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach.tif'
-    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040103\02040103.dep'
+    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040202\02040202.dep'
 #    str_dem_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003.dep'
+#    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600020405_MorganCreek\facet\morgan_utm18.tif"
     
     ## << VECTOR STREAMLINES (net) >>  
 ##    str_net_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/Network04.shp'
@@ -348,7 +349,8 @@ if __name__ == '__main__':
 #    str_net_in_path = r'D:\fernando\HAND\020802\020802-flows-utm.shp'
 #    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
 #    str_net_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_net.shp'
-    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040103\02040103_clip_utm18.shp'
+#    str_net_in_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600020405_MorganCreek\facet\morgan_nhdhires.shp"
+    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040202\02040202_nhdhires_utm18.shp'
 #    str_net_in_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003\121003-flows.shp'
       
     ## << BANK PIXELS >>   
