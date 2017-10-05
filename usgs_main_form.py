@@ -119,6 +119,22 @@ class facet(QtGui.QMainWindow):
         # << Progress Bar >>
         self.progressBar.setVisible(False)
 #        self.progressBar.setTextVisible(False)        
+        
+        # << Load Previous Paths from Settings >>
+        self.settings = QtCore.QSettings('taudem_path', 'facet')        
+        self.settings = QtCore.QSettings('mpi_path', 'facet')
+        self.settings = QtCore.QSettings('whitebox_path', 'facet')
+        
+        td_fname = self.settings.value('taudem_path', type=str)        
+        self.txt_taudem_pre.setText(td_fname)
+        
+        mpi_fname = self.settings.value('mpi_path', type=str)        
+        self.txt_mpi_pre.setText(mpi_fname)
+        
+        wb_fname = self.settings.value('whitebox_path', type=str)        
+        self.txt_whitebox_pre.setText(wb_fname)        
+        
+        
         # =====================================
         
     # =========================================    
@@ -203,14 +219,17 @@ class facet(QtGui.QMainWindow):
     def get_taudem_pre_path(self):
         fname = QtGui.QFileDialog.getExistingDirectory(self, 'Select Directory')
         self.txt_taudem_pre.setText(fname) 
+        self.settings.setValue('taudem_path', fname) # Save to settings
         
     def get_mpi_pre_exe(self):
         fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Executable (*.exe*)')
-        self.txt_mpi_pre.setText(fname)         
+        self.txt_mpi_pre.setText(fname)  
+        self.settings.setValue('mpi_path', fname) # Save to settings
     
     def get_whitebox_pre_exe(self):
         fname = QtGui.QFileDialog.getOpenFileName(self, 'Browse', '', 'Executable (*.*)')
-        self.txt_whitebox_pre.setText(fname)  
+        self.txt_whitebox_pre.setText(fname) 
+        self.settings.setValue('whitebox_path', fname) # Save to settings
 
     def set_hand_file(self):
         fname = QtGui.QFileDialog.getSaveFileName(self, 'Browse', '', 'Grids (*.*)')
@@ -266,7 +285,7 @@ class facet(QtGui.QMainWindow):
             if self.tabWidget.currentIndex() == 0: # Run pre-processing functions
             
                 print('About to preprocess')
-                funcs_v2.preprocess_dem(str(self.txt_dem_pre.text()), str(self.txt_nhd_pre), str(self.txt_mpi_pre), str(self.txt_taudem_pre), str(self.txt_whitebox_pre), self.chk_wg_pre.isChecked(), self.chk_whitebox_pre.isChecked(), self.chk_taudem_pre.isChecked())            
+                funcs_v2.preprocess_dem(str(self.txt_dem_pre.text()), str(self.txt_nhd_pre.text()), str(self.txt_mpi_pre.text()), str(self.txt_taudem_pre.text()), str(self.txt_whitebox_pre.text()), self.chk_wg_pre.isChecked(), self.chk_whitebox_pre.isChecked(), self.chk_taudem_pre.isChecked())            
             
             # << Xn-based analysis >>
             if self.tabWidget.currentIndex() == 1:

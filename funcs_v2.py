@@ -325,29 +325,30 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
         str_dem_path_tif = path_to_dem + '\\' + dem_filename[:-4]+'.tif'
         
 #        fel = path_to_dem + '\\' + dem_filename[:-4]+'_breach.tif'
-        fel = path_to_dem + '\\' + breach_filename_tif
-        p = path_to_dem + '\\' + breach_filename_tif[:-4]+'_p.tif'
-        sd8 = path_to_dem + '\\' + breach_filename_tif[:-4]+'_sd8.tif'        
-        ad8_wg = path_to_dem + '\\' + breach_filename_tif[:-4]+'_ad8_wg.tif'
-        wtgr = str_danglepts_path
-        ad8_no_wg = path_to_dem + '\\' + breach_filename_tif[:-4]+'_ad8_no_wg.tif'
-        ord_g = path_to_dem + '\\' + breach_filename_tif[:-4]+'_ord_g.tif'
-        tree = path_to_dem + '\\' + breach_filename_tif[:-4]+'_tree'
-        coord =path_to_dem + '\\' + breach_filename_tif[:-4]+'_coord'
-        net = path_to_dem + '\\' + breach_filename_tif[:-4]+'_net.shp'
-        w = path_to_dem + '\\' + breach_filename_tif[:-4]+'_w.tif'
-        slp = path_to_dem + '\\' + breach_filename_tif[:-4]+'_slp.tif'
-        ang = path_to_dem + '\\' + breach_filename_tif[:-4]+'_ang.tif'
-        dd = path_to_dem + '\\' + breach_filename_tif[:-4]+'_hand.tif'
+        fel_breach = os.path.join(path_to_dem + '/' + breach_filename_tif)
+        p = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_p.tif')
+        sd8 = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_sd8.tif')
+        
+        ad8_wg = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ad8_wg.tif')
+        wtgr = os.path.join(str_danglepts_path)
+        ad8_no_wg = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ad8_no_wg.tif')
+        ord_g = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ord_g.tif')
+        tree = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_tree')
+        coord =os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_coord')
+        net = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_net.shp')
+        w = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_w.tif')
+        slp = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_slp.tif')
+        ang = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ang.tif')
+        dd = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_hand.tif')
         
 #        # ==================== TauDEM Paths =========================
         # Hardcode paths from user input...
-        mpipath = str_mpi_path #r'"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe"'
-        d8flowdir = str_taudem_path + '\D8FlowDir.exe"' # r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
-        areaD8 = str_taudem_path + '\AreaD8.exe"'
-        streamnet = str_taudem_path + '\StreamNet.exe"'
-        dinfflowdir = str_taudem_path + '\DinfFlowDir.exe"'
-        dinfdistdown = str_taudem_path + '\DinfDistDown.exe"'        
+        mpipath = os.path.join(str_mpi_path) #r'"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe"'
+        d8flowdir = '"' + str_taudem_path + '\D8FlowDir.exe"' # r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
+        areaD8 = '"' + str_taudem_path + '\AreaD8.exe"'
+        streamnet = '"' + str_taudem_path + '\StreamNet.exe"'
+        dinfflowdir = '"' + str_taudem_path + '\DinfFlowDir.exe"'
+        dinfdistdown = '"' + str_taudem_path + '\DinfDistDown.exe"'        
                
                 
         # ========== << 1. Breach Depressions with GoSpatial/Whitebox Tool >> ==========
@@ -362,10 +363,9 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
         '''     
         # =================== << Whitebox Functions >> =====================
         if run_whitebox:
-            
-            print(str_whitebox_path)
-            sys.exit()
-            
+
+            print('Whitebox Path:  ' + 'r' + '"' + str_whitebox_path + '"')
+
             str_whitebox_dir, str_whitebox_exe = os.path.split(str_whitebox_path) 
         
             # << Run the BreachDepressions tool, specifying the arguments >>
@@ -402,8 +402,20 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
             create_wg_from_streamlines(str_streamlines_path, str_dem_path_tif, str_danglepts_path)            
             
         if run_taudem:
+
+            # Testing...
+#            mpipath = 'r' +  '"' + mpipath + '"'
+#            fel = 'r' +  '"' + fel + '"'
+            
+            print('mpipath: ' + mpipath)            
+            print('fel: ' + fel_breach)
+            print(' ')
+#            sys.exit()
+            # End tesing
+            
+            
     #        # ==============  << 3. D8 FDR with TauDEM >> ================        
-            cmd = mpipath + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
                   ' -sd8 ' + '"' + sd8 + '"'
             print(cmd)
             
@@ -421,11 +433,11 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
     #            if isinstance(line, bytes):	   # true in Python 3
     #                line = line.decode()
                 message = message + line        
-            print(message)            
+            print(message)    
                 
     #        # ============= << 4. D8 FAC with TauDEM >> ================        
     #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
-            cmd = mpipath + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
             
             # Submit command to operating system
             print('Running TauDEM D8 FAC (with weight grid)...')
@@ -442,7 +454,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
              
             # ============= << 4.a AD8 no weight grid with TauDEM >> ================
     #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
-            cmd = mpipath + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
             
             # Submit command to operating system
             print('Running TauDEM D8 FAC (no weights)...')
@@ -458,7 +470,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
             print(message)            
             
             # ============= << 4.b StreamReachandWatershed with TauDEM >> ================      
-            cmd = mpipath + ' -n ' + inputProc + '  ' + streamnet + ' -fel ' + '"' + fel + '"' + ' -p ' + '"' + p + '"' + \
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + streamnet + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
                   ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
                   '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
                   '"'        
@@ -488,7 +500,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
                 
             # ============= << 5. Dinf with TauDEM >> =============                
             print('Running TauDEM Dinfinity...')        
-            cmd = mpipath + ' -n ' + inputProc + '  ' + dinfflowdir + ' -fel ' + '"' + fel + '"' + ' -ang ' + '"' + ang + '"' + \
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfflowdir + ' -fel ' + '"' + fel_breach + '"' + ' -ang ' + '"' + ang + '"' + \
                   ' -slp ' + '"' + slp + '"'
             
             # Submit command to operating system
@@ -511,8 +523,8 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
             statmeth = 'ave'
             
             # Use original DEM here...
-            print('Running TauDEM Dinf Distance Down...') # Using Breached DEM here
-            cmd = mpipath + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
+            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
                   ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
         
             # Submit command to operating system
