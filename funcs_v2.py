@@ -1182,6 +1182,10 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
 #    j=0   
 #    progBar = self.progressBar
 #    progBar.setVisible(True) 
+
+    # For Testing...
+    bank_height_hand = -9999.
+    chan_width_hand = -9999.
     
     fp_height = 2.0 # How to get this?  By reach?
     p_fitlength=30  # For FP Xn's
@@ -1193,8 +1197,8 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
     
     gp_coords = df_coords.groupby('linkno')
     
-#    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
-    schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float', 'dist_sl':'float', 'dist':'float', 'sinuosity':'float', 'fp_width':'float'}}
+    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
+    schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float', 'dist_sl':'float', 'dist':'float', 'sinuosity':'float', 'fp_width':'float', 'bh_hand':'float','cw_hand':'float'}}
     
     # Access the floodplain grid...
     with rasterio.open(str(str_hand_path)) as ds_hand:
@@ -1231,24 +1235,13 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                         # NOTE:  Reach might not be long enough to break up
                         i_step=30 # is this same as fit_length defined above??
                         arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
-                        lst_dfsegs = np.split(df_linkno, arr_ind)
+                        lst_dfsegs = np.split(df_linkno, arr_ind)                        
                         
-                        i_reachsegs = len(lst_dfsegs)
-                        
-                        for i_seg, df in enumerate(lst_dfsegs): # looping over each reach segment
+                        for i_seg, df_seg in enumerate(lst_dfsegs): # looping over each reach segment
                             
-                            arr_x = df.x.values
-                            arr_y = df.y.values
-                        
-#                        for i, indx in enumerate(arr_ind):                            
-##                            if i>0: indx = indx-1
-#                            try:
-#                                arr_x = df_linkno.x.iloc[indx:arr_ind[i+1]].values
-#                                arr_y = df_linkno.y.iloc[indx:arr_ind[i+1]].values            
-#                            except:
-##                                arr_x = df_linkno.x.iloc[indx:arr_ind[-1]].values
-##                                arr_y = df_linkno.y.iloc[indx:arr_ind[-1]].values                                
-#                                break
+                            arr_x = df_seg.x.values
+                            arr_y = df_seg.y.values
+
                             try:
                                 # Calculate straight line distance...
                                 dist_sl = np.sqrt((arr_x[0] - arr_x[-1])**2 + (arr_y[0] - arr_y[-1])**2)                     
@@ -1257,7 +1250,7 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                                 break
                             
                             try:
-                                # Create a line segment from endpts in df_linkno...
+                                # Create a line segment from endpts in df_seg...
                                 ls = LineString(zip(arr_x, arr_y))
                             
                                 dist = ls.length
@@ -1323,41 +1316,23 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                                     weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))
                                     
     #                                weighted_avg=weighted_avg*2   # Multiply buffer by 2 to get width
-                            except:
-    #                            weighted_avg=-9999.
-                                print('Error calculating weighted average of buffer distance')
-                                continue                                                                                                                        
+                                                                        
+                            except Exception as e:
+                                weighted_avg_left=-9999.
+                                weighted_avg_rt=-9999.
+                                fp_width=-9999.
+                                print('Error calculating weighted average of buffer distance. Exception: {} \n'.format(e))
+#                                continue                                                                                                                        
                             
                             # << FP Width Here >>                            
                             midpt_indx = int(len(arr_x)/2)
-                            
-                            lstThisSegmentRows = []
-                            lstThisSegmentCols = []                            
-                    
-                            if (midpt_indx - p_fitlength < 0):
-                                lstThisSegmentRows.append(df_linkno.y.iloc[0])
-                                lstThisSegmentRows.append(df_linkno.y.iloc[0])
-                                lstThisSegmentCols.append(df_linkno.x.iloc[0])
-                                lstThisSegmentCols.append(df_linkno.x.iloc[0])
-                                
-                            elif (midpt_indx + p_fitlength >= len(df_linkno.index)):
-                                lstThisSegmentRows.append(df_linkno.y.iloc[max_indx])
-                                lstThisSegmentRows.append(df_linkno.y.iloc[max_indx])
-                                lstThisSegmentCols.append(df_linkno.x.iloc[max_indx])
-                                lstThisSegmentCols.append(df_linkno.x.iloc[max_indx])                                
-                                
-                            else:                    
-                                lstThisSegmentRows.append(df_linkno.y.iloc[midpt_indx - p_fitlength])
-                                lstThisSegmentRows.append(df_linkno.y.iloc[midpt_indx + p_fitlength])
-                                lstThisSegmentCols.append(df_linkno.x.iloc[midpt_indx - p_fitlength])
-                                lstThisSegmentCols.append(df_linkno.x.iloc[midpt_indx + p_fitlength])                            
-                            
+                                                     
                             # midPt x and y...
-                            midpt_x = df_linkno.x.iloc[midpt_indx]
-                            midpt_y = df_linkno.y.iloc[midpt_indx]                              
+                            midpt_x = df_seg.x.iloc[midpt_indx]
+                            midpt_y = df_seg.y.iloc[midpt_indx]                              
                             
                             # Send it the endpts of what you to draw a perpendicular line to...
-                            lst_xy = build_fp_xn(lstThisSegmentRows, lstThisSegmentCols, midpt_x, midpt_y, p_fpxnlen)
+                            lst_xy = build_fp_xn(list(arr_y), list(arr_x), midpt_x, midpt_y, p_fpxnlen)
                             
                             try:                               
                                 # Turn the list of tuples into a linestring
@@ -1365,19 +1340,24 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                             except:
                                 print('Error converting Xn endpts to LineString')
                                 continue
-                                
-                                
+                                                                
                             # Do the buffering, etc          
                             fp_buff_dist=dist_sl/2 # have of the line segment straight line distance
                             geom_fpls_buff = fp_ls.buffer(fp_buff_dist, cap_style=2)
                             buff = mapping(geom_fpls_buff)
+                            
+                            if i_seg==5:
+                                # Write out buffer polygon(s)...NOTE:  Could write out ind
+                                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
+                                    buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
+                                sys.exit()                              
                             
                             # Mask the bankpts file for each feature...
                             out_image, out_transform = rasterio.mask.mask(ds_hand, [buff], crop=True)
                             
                             # Count the number of pixels in the buffered Xn...
 #                            num_pixels = len(out_image[out_image==1]) # this assumes HAND has already been sliced
-                            num_pixels = len(out_image[(out_image<=fp_height)&(out_image>=0.)])
+                            num_pixels = out_image[(out_image<=fp_height)&(out_image>=0.)].size
                              
                             # Calculate area of FP pixels...
                             area_pixels = num_pixels*(ds_hand.res[0]**2) # get grid resolution               
@@ -1389,15 +1369,15 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                             fp_width = fp_width - (weighted_avg_left+weighted_avg_rt)
                             
                             if fp_width<0.: fp_width = 0 # don't have negatives              
+
+                            # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>                            
+#                            if (i_seg >= 30) and (i_seg <= 35):                                
+                            bank_height_hand, chan_width_hand = analyze_hand_buff(out_image, fp_buff_dist, ds_hand.res[0], parm_ivert)
                             
-                            if (i_seg >= 5) and (i_seg <= 10):
-                                # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>
-                                analyze_hand_buff(buff, fp_buff_dist, str_hand_path, parm_ivert)
-                            
-                            if i_seg > 10: sys.exit()
+#                            if i_seg > 35: sys.exit()
                             
                             # Write to an output file here...
-                            output.write({'properties':{'linkno':i_linkno, 'ch_wid_total': weighted_avg_left+weighted_avg_rt, 'ch_wid_1': weighted_avg_left, 'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl, 'dist':dist, 'sinuosity': sinuosity, 'fp_width':fp_width}, 'geometry':mapping(ls)})                            
+                            output.write({'properties':{'linkno':i_linkno, 'ch_wid_total': weighted_avg_left+weighted_avg_rt, 'ch_wid_1': weighted_avg_left, 'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl, 'dist':dist, 'sinuosity': sinuosity, 'fp_width':fp_width, 'bh_hand':bank_height_hand,'cw_hand':chan_width_hand}, 'geometry':mapping(ls)})                            
 
     return
 
@@ -1675,198 +1655,48 @@ def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reac
 # ===============================================================================
 #  Analyze DEM in vertical slices using an individual polygon
 # =============================================================================== 
-def analyze_hand_buff(buff, fp_buff_dist, str_grid_path, i_interval):
+def analyze_hand_buff(w, fp_buff_dist, res, i_interval):
+                        
+    i_rng=10
+    arr_slices = np.arange(i_interval, i_rng, i_interval)    
     
-#    buff_dist=10
+    lst_count=[]
+    lst_width=[]
     
-    str_reachid='gridcode'
+    # List comprehension here instead??
+    for i_step in arr_slices: 
+
+        num_pixels = w[(w<i_step) & (w>=0.)].size
            
-    # Open the hand...
-    with rasterio.open(str(str_grid_path)) as ds_grid:        
-                                     
-            # Mask the bankpts file for each feature...
-            w, out_transform = rasterio.mask.mask(ds_grid, [buff], crop=True)
+        lst_count.append(num_pixels) # number of pixels greater than or equal to zero and less than the height interval
             
-#            if np.size(w) < 9:
-#                continue
-            
-#                w[w<0]=9999. # handle no data vals?
-            
-            # Normalize to zero...
-#                min_elev = w[w>0].min()             
-#                w = w - min_elev
-            
-            # Find max value in window...
-#            w_max = w.max()
-            
-#                # ===================================================================
-#                # << 3D plot >> 
-#                fig = plt.figure()            
-#                ax = fig.add_subplot(111, projection='3d')
-#                Y=np.arange(0,np.shape(arr_norm)[1],1)
-#                X=np.arange(0,np.shape(arr_norm)[2],1)
-#                X, Y = np.meshgrid(X, Y)
-#                
-#                arr_norm[arr_norm<0] = -0.5
-#                out_image[out_image<0] = -0.5
-#               
-#                surf = ax.plot_surface(X, Y, out_image[0], cmap=cm.jet, linewidth=0, antialiased=True, rstride=1, cstride=1)
-#                
-#                # Add a color bar which maps values to colors.
-#                fig.colorbar(surf, shrink=0.5, aspect=5)            
-#                # ===================================================================
-                            
-            # Now perform vertical slices...
-#                i_interval = 0.1 # m
-#                i_rng = w_max # m
-                            
-            i_rng=10
-            arr_slices = np.arange(i_interval, i_rng, i_interval)    
-            
-            lst_count=[]
-            lst_width=[]
-            
-            # List comprehension here instead??
-            for i_step in arr_slices: 
+        # Calculate area of FP pixels...
+        area_pixels = num_pixels*(res**2) # grid resolution               
+        
+        # Calculate width by stretching it along the length of the 2D Xn...
+        lst_width.append(area_pixels/(fp_buff_dist*2))                 
 
-                num_pixels = w[(w<i_step) & (w>=0)].size
-                   
-                lst_count.append(num_pixels) # number of pixels greater than or equal to zero and less than the height interval
-                    
-                # Calculate area of FP pixels...
-                area_pixels = num_pixels*(ds_grid.res[0]**2) # get grid resolution               
-                
-                # Calculate width by stretching it along the length of the 2D Xn...
-                lst_width.append(area_pixels/(fp_buff_dist*2))                 
-
-            df_steps = pd.DataFrame({'count':lst_count, 'height':arr_slices, 'width':lst_width})
-            
-            df_steps.plot(x='width',y='height', marker='.')
-            
+    df_steps = pd.DataFrame({'count':lst_count, 'height':arr_slices, 'width':lst_width})
+    
+    df_steps.plot(x='width',y='height', marker='.')        
 #            sys.exit()
-            
-            # ======================= BEGIN TESTING =======================
-            
-#            hist, bins = np.histogram(df_steps['count'], bins=20, density=True) # div is the right bin edge?
-#            
-##            pdf = kde_scipy(count, div, bandwidth=0.2)
-#            
-#            bin_centers = bins[:-1] + 0.5 * (bins[1:] - bins[:-1])
-#            
-#            # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
-#            p0 = [1., 0., 1.]
-#            
-#            coeff, var_matrix = curve_fit(gauss_func, bin_centers, hist, p0=p0)
-#            # Get the fitted curve
-#            hist_fit = gauss_func(bin_centers, *coeff)
-#            
-#            plt.plot(bin_centers, hist, label='Test data')
-#            plt.plot(bin_centers, hist_fit, label='Fitted data')
-#            
-#            # Finally, lets get the fitting parameters, i.e. the mean and standard deviation:
-#            print 'Fitted mean = ', coeff[1]
-#            print 'Fitted standard deviation = ', coeff[2]
-#            
-#            plt.show()            
-#            
-##            fig, ax = plt.subplots(1)            
-##            ax.plot(count, pdf, color='blue', alpha=0.5, lw=3)            
-#            
-#            
-##            test = pd.cut(df_steps['count'], 10).value_counts().sort_index()
-#            
-#            df_steps.hist(column='count', bins=7) #df_steps['count'].count()/2)
-#                       
-#                        
-            # ======================= END TESTING =======================
-            
-            # Slope of width...
-            df_steps['width_diff'] = df_steps['width'].diff()
-            
-            # Slope of slope of count...
-            df_steps['width_diff_2nd'] = df_steps['width_diff'].diff()  # Max val for width_diff_2nd is the bank?
-            
-            # Find the top three maximum diff_2nd values and select the one with the lowest height?
-            df_top3 = df_steps.nlargest(3, columns='width_diff_2nd')
-            
-            bank_height = df_steps['height'].iloc[df_top3['height'].idxmin()-1]
-            chan_width = df_steps['width'].iloc[df_top3['height'].idxmin()-1]
-            
-            print(bank_height)
-            print(chan_width)
-            
-            # Gradient...
-#            df_steps['width'] = np.gradient(df_steps['width'])
-            
-            
-#            sys.exit()
-#            
-#            # Max slp_2nd is bank, min is FP...
-#            idx_bank = df_steps['count_diff_2nd'].idxmax() 
-#            idx_fp = df_steps['count_diff_2nd'].idxmin() 
-            
-#                # Rolling mean of slope...
-#                df_steps['mean_slp'] = df_steps['count_slp'].rolling(window=3, center=True).mean()                
-#                
-#                # Cumulative of count...
-#                df_steps['count_cs'] = df_steps['count'].cumsum()
-#                
-#                # Slope of cumulative curve...
-#                i_offset=1
-#                df_steps['count_pct'] = df_steps['count'].pct_change(i_offset) 
-#                
-#                # Delta slope...
-#                df_steps['pct_delta'] = df_steps['count_pct'].diff(i_offset)
-#                
-#                srs_peaks = find_peaks_from_series(df_steps['mean_slp'], 6, 1.35)                
-#                srs_peaks.sort_values(inplace=True, ascending=False)
-            
-#                srs_peaks.index[0]
-            
-            # Index of max slope value...
-#                test = df_steps['count_slp'].idxmax()
-            
-#                # Enforce positive pct_change?
-#                if (df_steps['pct_delta'].iloc[df_steps['pct_delta'].idxmax()-i_offset] > 0):
-#                    # Height value where slope is greatest...
-#                val_height = df_steps['height'].iloc[df_steps['count_pct'].idxmax()-i_offset]
-#                val_count_cs = df_steps['count_cs'].iloc[df_steps['count_pct'].idxmax()-i_offset]
-#    #                val_count = df_steps['count'].iloc[df_steps['count_delta'].idxmax()-i_offset]
-#                else:
-#                    val_height = np.nan
-#                    val_count_cs = np.nan
-
-
-#                print('linkno: {} | xn: {} | val_height: {} | val_cs: {}\t| w_max: {:3.1f}'.format(line['properties']['linkno'], cntr, val_height, val_count_cs, w_max))    
-            
-#                if shed['properties'][str_reachid] == 6 and cntr == 0:
-#                    print('pause')                
-#            try:
-#                # ===================================================================== 
-#                ax.plot(df_steps['height'].iloc[idx_bank], df_steps['count'].iloc[idx_bank], marker='o', linestyle='')
-#                ax.plot(df_steps['height'].iloc[idx_fp], df_steps['count'].iloc[idx_fp], marker='*', linestyle='')
-##                ax.plot(df_steps['height'], df_steps['mean_slp'], marker='.')
-#                ax.plot(df_steps['height'], df_steps['count'])   
-##                ax.plot(val_count_cs, val_height, marker='*', linestyle='') 
-#                ax.set_title('ARCID: {}'.format(shed['properties'][str_reachid]), fontsize=11) 
-#                # =====================================================================
-#            except:
-#                pass
-#            
-#            cntr += 1
-#            
-#            prev_linkno = shed['properties'][str_reachid]
-#            
-##                if line['properties'][str_reachid] == test_id and cntr > 50:
-##                    break
-#                
-#            ax.set_ylabel('count')
-#            ax.set_xlabel('height (m)') 
-                             
-#                if line['properties']['linkno'] > 3:
-#                    sys.exit()
+    
+    # Slope of width...
+    df_steps['width_diff'] = df_steps['width'].diff()
+    
+    # Slope of slope of count...
+    df_steps['width_diff_2nd'] = df_steps['width_diff'].diff()  # Max val for width_diff_2nd is the bank?
+    
+    # Find the top three maximum diff_2nd values and select the one with the lowest height?
+    df_top3 = df_steps.nlargest(3, columns='width_diff_2nd')
+    
+    bank_height = df_steps['height'].iloc[df_top3['height'].idxmin()-1]
+    chan_width = df_steps['width'].iloc[df_top3['height'].idxmin()-1]
+    
+    print(bank_height)
+    print(chan_width)
                     
-    return    
+    return bank_height, chan_width
     
  # ===============================================================================
 #  Analyze DEM in vertical slices successive buffers stream reaches
