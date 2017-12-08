@@ -11,13 +11,17 @@ import subprocess
 import timeit
 import numpy as np
 from numpy import asarray
+
+from scipy.stats import gaussian_kde # TEST
+from scipy.optimize import curve_fit # TEST
+
 import os
 #import ntpath
 from math import atan, ceil
 import sys
 from math import isinf, sqrt
 import rasterio
-import rasterio.tools.mask
+import rasterio.mask
 from rasterio.warp import transform
 from rasterio.features import shapes
 import rasterio.features
@@ -412,29 +416,39 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
         
             # << Run the BreachDepressions tool, specifying the arguments >>
             name = "BreachDepressions"        
-#            args = [dem_filename, breach_filename_dep, '-1', '-1', 'True', 'True'] # NOTE:  Make these last four variables accessible to user?
-            args = ['--dem='+dem_filename, '-o='+breach_filename_tif]
+            args = [dem_filename, breach_filename_dep, '-1', '-1', 'True', 'True'] # GoSpatial verion. NOTE:  Make these last four variables accessible to user?
+#            args = ['--dem='+dem_filename, '-o='+breach_filename_dep] # Rust version
             
-#            ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
-            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
+            ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
+#            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
             if ret != 0:
                 print("ERROR: return value={}".format(ret)) 
                 
-#            # << Convert .dep to .tif here? >>  NOTE:  Only for DRB hack when using .dep files
-#            name = "WhiteBox2GeoTiff"
-#            args = [breach_filename_dep, breach_filename_tif] 
-#            
-#            ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
-#            if ret != 0:
-#                print("ERROR: return value={}".format(ret))   
+#             << Convert .dep to .tif here? >>  NOTE:  Only for DRB hack when using .dep files
+            name = "WhiteBox2GeoTiff"
+            args = [breach_filename_dep, breach_filename_tif] 
+            
+            ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
+            if ret != 0:
+                print("ERROR: return value={}".format(ret))   
+                
+#            # Rust version...
+#            name = "ConvertRasterFormat"
+#            args = ['--input='+breach_filename_dep, '-o='+breach_filename_tif]
+#            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)                
                 
 #            # << Also convert original DEM .dep to a .tif >>
 #            name = "WhiteBox2GeoTiff"
 #            args = [dem_filename, dem_filename_tif] 
 #            
-#            ret = run_gospatial_tool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
+#            ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
 #            if ret != 0:
-#                print("ERROR: return value={}".format(ret))           
+#                print("ERROR: return value={}".format(ret))    
+                
+            # Rust version...
+            name = "ConvertRasterFormat"
+            args = ['--input='+dem_filename, '-o='+dem_filename_tif]
+            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)                
         
         # TEST.  NOTE: Need to update spatial reference on .tifs here!
 #        with rasterio.open(path_to_dem + '\\' + breach_filename_tif, 'r') as dem_tif: # , crs='EPSG:26918'
@@ -1156,12 +1170,12 @@ def floodplain_width_fppixels_segments_po(df_coords, str_streamlines_path, str_f
                                                     
     return
     
-# ===============================================================================
+# =================================================================================
 #  Calculate channel width based on bank pixels and stream line parallel offsets, 
 #  potentially subdividing using Xn's
 #  NOTE: Make this a generic metric calculator by segment?  (ie., sinuosity, etc)
-# =============================================================================== 
-def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path):
+# =================================================================================
+def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path, parm_ivert):
     
     print('Channel width from bank pixels -- segmented reaches...')
 
@@ -1174,7 +1188,7 @@ def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path,
     
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
     head, tail = os.path.split(str_streamlines_path)    
-    str_outname = tail[:-4] + '_ch_fp_width_po.shp'
+    str_outname = tail[:-4] + '_ch_fp_width_po_hand.shp'
     str_outpath = head + '/' + str_outname 
     
     gp_coords = df_coords.groupby('linkno')
@@ -1207,25 +1221,26 @@ def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path,
                         i_linkno = int(i_linkno)
                         max_indx = len(df_linkno.index) - 1
                         
-#                        if i_linkno <> 74:
-#                            continue
+                        if i_linkno <> 185:
+                            continue
                         
                         print('linkno:  {}'.format(i_linkno))
               
                         # << Analysis by reach segments >>
                         # Set up index array to split up df_linkno into segments (these dictate the reach segment length)...
                         # NOTE:  Reach might not be long enough to break up
-                        i_step=30
+                        i_step=30 # is this same as fit_length defined above??
                         arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
                         lst_dfsegs = np.split(df_linkno, arr_ind)
                         
-                        for df in lst_dfsegs:
+                        i_reachsegs = len(lst_dfsegs)
+                        
+                        for i_seg, df in enumerate(lst_dfsegs): # looping over each reach segment
                             
                             arr_x = df.x.values
                             arr_y = df.y.values
                         
-#                        for i, indx in enumerate(arr_ind):
-#                            
+#                        for i, indx in enumerate(arr_ind):                            
 ##                            if i>0: indx = indx-1
 #                            try:
 #                                arr_x = df_linkno.x.iloc[indx:arr_ind[i+1]].values
@@ -1259,29 +1274,26 @@ def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path,
                                         # Watch out for potential geometry errors here...
                                         ls_offset_left = ls.parallel_offset(buff_dist, 'left')
                                         ls_offset_rt = ls.parallel_offset(buff_dist, 'right')   
-            #                                ls_offset_left
                                         
             #                            # Write out buffer polygon(s)...NOTE:  Could write out ind
             #                            with fiona.open(r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\buffer.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
             #                                buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
             #                            sys.exit()                    
-                                                    
+
                                         # Mask the bankpts file for each feature...
-            #                                out_image, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [buff], crop=True) 
-                                                    
-            #                                print(indx, buff_dist)
-                                        
+            #                                out_image, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [buff], crop=True)                                                     
+            #                                print(indx, buff_dist)                                        
             #                                if (indx==79) and (buff_dist==24):
             #                                    print('pause')
             #                                    continue
                                         
-                                        out_left, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)   
-                                        out_rt, out_transform = rasterio.tools.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
+                                        out_left, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)   
+                                        out_rt, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
                                         
                                         num_pixels_left = len(out_left[out_left>0])
                                         num_pixels_rt = len(out_rt[out_rt>0])
                                         
-            #                                # You want the number of pixels gained by each interval...                    
+                                        # You want the number of pixels gained by each interval...                    
                                         tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
                                         lst_tally.append(tpl_out)                    
                                         df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
@@ -1361,7 +1373,7 @@ def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path,
                             buff = mapping(geom_fpls_buff)
                             
                             # Mask the bankpts file for each feature...
-                            out_image, out_transform = rasterio.tools.mask.mask(ds_hand, [buff], crop=True)
+                            out_image, out_transform = rasterio.mask.mask(ds_hand, [buff], crop=True)
                             
                             # Count the number of pixels in the buffered Xn...
 #                            num_pixels = len(out_image[out_image==1]) # this assumes HAND has already been sliced
@@ -1376,7 +1388,13 @@ def channel_and_fp_width_bankpixels_segments_po(df_coords, str_streamlines_path,
                             # Subtract channel width from fp width...
                             fp_width = fp_width - (weighted_avg_left+weighted_avg_rt)
                             
-                            if fp_width<0.: fp_width = 0 # don't have negatives                            
+                            if fp_width<0.: fp_width = 0 # don't have negatives              
+                            
+                            if (i_seg >= 5) and (i_seg <= 10):
+                                # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>
+                                analyze_hand_buff(buff, fp_buff_dist, str_hand_path, parm_ivert)
+                            
+                            if i_seg > 10: sys.exit()
                             
                             # Write to an output file here...
                             output.write({'properties':{'linkno':i_linkno, 'ch_wid_total': weighted_avg_left+weighted_avg_rt, 'ch_wid_1': weighted_avg_left, 'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl, 'dist':dist, 'sinuosity': sinuosity, 'fp_width':fp_width}, 'geometry':mapping(ls)})                            
@@ -1642,6 +1660,214 @@ def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reac
     
     return
     
+#def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
+#    """Kernel Density Estimation with Scipy"""
+#    # Note that scipy weights its bandwidth by the covariance of the
+#    # input data.  To make the results comparable to the other methods,
+#    # we divide the bandwidth by the sample standard deviation here.
+#    kde = gaussian_kde(x, bw_method=bandwidth / x.std(ddof=1), **kwargs)
+#    return kde.evaluate(x_grid)   
+#    
+#def gauss_func(x, *p):
+#    A, mu, sigma = p
+#    return A*np.exp(-(x-mu)**2/(2.*sigma**2))
+    
+# ===============================================================================
+#  Analyze DEM in vertical slices using an individual polygon
+# =============================================================================== 
+def analyze_hand_buff(buff, fp_buff_dist, str_grid_path, i_interval):
+    
+#    buff_dist=10
+    
+    str_reachid='gridcode'
+           
+    # Open the hand...
+    with rasterio.open(str(str_grid_path)) as ds_grid:        
+                                     
+            # Mask the bankpts file for each feature...
+            w, out_transform = rasterio.mask.mask(ds_grid, [buff], crop=True)
+            
+#            if np.size(w) < 9:
+#                continue
+            
+#                w[w<0]=9999. # handle no data vals?
+            
+            # Normalize to zero...
+#                min_elev = w[w>0].min()             
+#                w = w - min_elev
+            
+            # Find max value in window...
+#            w_max = w.max()
+            
+#                # ===================================================================
+#                # << 3D plot >> 
+#                fig = plt.figure()            
+#                ax = fig.add_subplot(111, projection='3d')
+#                Y=np.arange(0,np.shape(arr_norm)[1],1)
+#                X=np.arange(0,np.shape(arr_norm)[2],1)
+#                X, Y = np.meshgrid(X, Y)
+#                
+#                arr_norm[arr_norm<0] = -0.5
+#                out_image[out_image<0] = -0.5
+#               
+#                surf = ax.plot_surface(X, Y, out_image[0], cmap=cm.jet, linewidth=0, antialiased=True, rstride=1, cstride=1)
+#                
+#                # Add a color bar which maps values to colors.
+#                fig.colorbar(surf, shrink=0.5, aspect=5)            
+#                # ===================================================================
+                            
+            # Now perform vertical slices...
+#                i_interval = 0.1 # m
+#                i_rng = w_max # m
+                            
+            i_rng=10
+            arr_slices = np.arange(i_interval, i_rng, i_interval)    
+            
+            lst_count=[]
+            lst_width=[]
+            
+            # List comprehension here instead??
+            for i_step in arr_slices: 
+
+                num_pixels = w[(w<i_step) & (w>=0)].size
+                   
+                lst_count.append(num_pixels) # number of pixels greater than or equal to zero and less than the height interval
+                    
+                # Calculate area of FP pixels...
+                area_pixels = num_pixels*(ds_grid.res[0]**2) # get grid resolution               
+                
+                # Calculate width by stretching it along the length of the 2D Xn...
+                lst_width.append(area_pixels/(fp_buff_dist*2))                 
+
+            df_steps = pd.DataFrame({'count':lst_count, 'height':arr_slices, 'width':lst_width})
+            
+            df_steps.plot(x='width',y='height', marker='.')
+            
+#            sys.exit()
+            
+            # ======================= BEGIN TESTING =======================
+            
+#            hist, bins = np.histogram(df_steps['count'], bins=20, density=True) # div is the right bin edge?
+#            
+##            pdf = kde_scipy(count, div, bandwidth=0.2)
+#            
+#            bin_centers = bins[:-1] + 0.5 * (bins[1:] - bins[:-1])
+#            
+#            # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
+#            p0 = [1., 0., 1.]
+#            
+#            coeff, var_matrix = curve_fit(gauss_func, bin_centers, hist, p0=p0)
+#            # Get the fitted curve
+#            hist_fit = gauss_func(bin_centers, *coeff)
+#            
+#            plt.plot(bin_centers, hist, label='Test data')
+#            plt.plot(bin_centers, hist_fit, label='Fitted data')
+#            
+#            # Finally, lets get the fitting parameters, i.e. the mean and standard deviation:
+#            print 'Fitted mean = ', coeff[1]
+#            print 'Fitted standard deviation = ', coeff[2]
+#            
+#            plt.show()            
+#            
+##            fig, ax = plt.subplots(1)            
+##            ax.plot(count, pdf, color='blue', alpha=0.5, lw=3)            
+#            
+#            
+##            test = pd.cut(df_steps['count'], 10).value_counts().sort_index()
+#            
+#            df_steps.hist(column='count', bins=7) #df_steps['count'].count()/2)
+#                       
+#                        
+            # ======================= END TESTING =======================
+            
+            # Slope of width...
+            df_steps['width_diff'] = df_steps['width'].diff()
+            
+            # Slope of slope of count...
+            df_steps['width_diff_2nd'] = df_steps['width_diff'].diff()  # Max val for width_diff_2nd is the bank?
+            
+            # Find the top three maximum diff_2nd values and select the one with the lowest height?
+            df_top3 = df_steps.nlargest(3, columns='width_diff_2nd')
+            
+            bank_height = df_steps['height'].iloc[df_top3['height'].idxmin()-1]
+            chan_width = df_steps['width'].iloc[df_top3['height'].idxmin()-1]
+            
+            print(bank_height)
+            print(chan_width)
+            
+            # Gradient...
+#            df_steps['width'] = np.gradient(df_steps['width'])
+            
+            
+#            sys.exit()
+#            
+#            # Max slp_2nd is bank, min is FP...
+#            idx_bank = df_steps['count_diff_2nd'].idxmax() 
+#            idx_fp = df_steps['count_diff_2nd'].idxmin() 
+            
+#                # Rolling mean of slope...
+#                df_steps['mean_slp'] = df_steps['count_slp'].rolling(window=3, center=True).mean()                
+#                
+#                # Cumulative of count...
+#                df_steps['count_cs'] = df_steps['count'].cumsum()
+#                
+#                # Slope of cumulative curve...
+#                i_offset=1
+#                df_steps['count_pct'] = df_steps['count'].pct_change(i_offset) 
+#                
+#                # Delta slope...
+#                df_steps['pct_delta'] = df_steps['count_pct'].diff(i_offset)
+#                
+#                srs_peaks = find_peaks_from_series(df_steps['mean_slp'], 6, 1.35)                
+#                srs_peaks.sort_values(inplace=True, ascending=False)
+            
+#                srs_peaks.index[0]
+            
+            # Index of max slope value...
+#                test = df_steps['count_slp'].idxmax()
+            
+#                # Enforce positive pct_change?
+#                if (df_steps['pct_delta'].iloc[df_steps['pct_delta'].idxmax()-i_offset] > 0):
+#                    # Height value where slope is greatest...
+#                val_height = df_steps['height'].iloc[df_steps['count_pct'].idxmax()-i_offset]
+#                val_count_cs = df_steps['count_cs'].iloc[df_steps['count_pct'].idxmax()-i_offset]
+#    #                val_count = df_steps['count'].iloc[df_steps['count_delta'].idxmax()-i_offset]
+#                else:
+#                    val_height = np.nan
+#                    val_count_cs = np.nan
+
+
+#                print('linkno: {} | xn: {} | val_height: {} | val_cs: {}\t| w_max: {:3.1f}'.format(line['properties']['linkno'], cntr, val_height, val_count_cs, w_max))    
+            
+#                if shed['properties'][str_reachid] == 6 and cntr == 0:
+#                    print('pause')                
+#            try:
+#                # ===================================================================== 
+#                ax.plot(df_steps['height'].iloc[idx_bank], df_steps['count'].iloc[idx_bank], marker='o', linestyle='')
+#                ax.plot(df_steps['height'].iloc[idx_fp], df_steps['count'].iloc[idx_fp], marker='*', linestyle='')
+##                ax.plot(df_steps['height'], df_steps['mean_slp'], marker='.')
+#                ax.plot(df_steps['height'], df_steps['count'])   
+##                ax.plot(val_count_cs, val_height, marker='*', linestyle='') 
+#                ax.set_title('ARCID: {}'.format(shed['properties'][str_reachid]), fontsize=11) 
+#                # =====================================================================
+#            except:
+#                pass
+#            
+#            cntr += 1
+#            
+#            prev_linkno = shed['properties'][str_reachid]
+#            
+##                if line['properties'][str_reachid] == test_id and cntr > 50:
+##                    break
+#                
+#            ax.set_ylabel('count')
+#            ax.set_xlabel('height (m)') 
+                             
+#                if line['properties']['linkno'] > 3:
+#                    sys.exit()
+                    
+    return    
+    
  # ===============================================================================
 #  Analyze DEM in vertical slices successive buffers stream reaches
 # ===============================================================================    
@@ -1724,7 +1950,7 @@ def analyze_hand_sheds(str_sheds_path, str_grid_path, i_interval):
     
 #    buff_dist=10
     
-    str_reachid='GRIDCODE'
+    str_reachid='gridcode'
            
     # Open the dem...
     with rasterio.open(str(str_grid_path)) as ds_grid:
@@ -1752,10 +1978,8 @@ def analyze_hand_sheds(str_sheds_path, str_grid_path, i_interval):
                     cntr = 0
                 
                 # Buffer each feature...
-#                geom = shape(shed['geometry'])   # Convert to shapely geometry to operate on it
-                
-#                print('linkno: {}'.format(line['properties'][str_reachid]))
-       
+#                geom = shape(shed['geometry'])   # Convert to shapely geometry to operate on it 
+#                print('linkno: {}'.format(line['properties'][str_reachid]))  
                                      
                 # Mask the bankpts file for each feature...
                 w, out_transform = rasterio.tools.mask.mask(ds_grid, [shed['geometry']], crop=True)

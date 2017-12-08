@@ -404,13 +404,14 @@ if __name__ == '__main__':
 #    str_dem_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEMfel_dem_post.tif'
 #    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_dem_clip_utm18.tif'
 #    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18.tif'
-#    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach.tif'
+    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach.tif'
 #    str_dem_path = r'D:\fernando\HAND\020802\020802_utm.tif' # 10 m
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM.tif'
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503010802_MahantangoCreek\DEM.tif'    
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\DEM_utm18.tif'
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach.tif'
-    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040105_crash\02040105_top.tif'
+#    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040203_crash\02040203_upper.dep"
+#    str_dem_path = r"C:\Terrain_and_Bathymetry\OWP\hand_experiments\bwt\bwt_topobathy_huc6.dep"    
 #    str_dem_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003.dep'
 #    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020700081004_DifficultRun\facet\dr_utm18.tif"
 #    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600030902_GwynnsFalls\facet\DEM_utm18.tif"
@@ -426,14 +427,14 @@ if __name__ == '__main__':
 #    str_net_in_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_breach_net.shp'
 #    str_site_nhdhires_path = r'D:\CFN_data\nhd_hires\nhdhires_choptank0206_utm18.shp'
 #    str_site_nhdhires_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\nhd_hires\dr_nhd_hires_utm18.shp'
-#    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_net.shp'
+    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_net.shp'
 #    str_net_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\headwaters\upperreaches.shp'
 #    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\dr3m_net_raw.shp'
 #    str_net_in_path = r'D:\fernando\HAND\020802\020802-flows-utm.shp'
 #    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
 #    str_net_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_net.shp'
 #    str_net_in_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020700081004_DifficultRun\facet\dr_nhdhires_utm18.shp"
-    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040105_crash\nhdhires_02040105_top.shp'
+#    str_net_in_path = r"C:\Terrain_and_Bathymetry\OWP\hand_experiments\guadalupe\bwtombigbee_nwm_route_link.shp"
 #    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040105_crash\nhdhires_02040104.shp'
 #    str_net_in_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003\121003-flows.shp'
       
@@ -441,7 +442,7 @@ if __name__ == '__main__':
 ##    str_bankpixels_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/bank_pixels_02050205_H.tif'
 #    str_bankpixels_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_bankpixels.tif'
 #    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
-#    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\bankpixels_raw_dem.tif'
+    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\bankpixels_raw_dem.tif'
 #    str_bankpixels_path =r'D:\fernando\HAND\020802\0202802_utm_bankpixels.tif'
 #    str_bankpixels_path =r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_bankpixels.tif'
     
@@ -465,13 +466,13 @@ if __name__ == '__main__':
 #    str_xns_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\headwaters\xns.shp'
 
     ## << HAND (dd) >>    
-#    str_hand_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/dr3m_hand.tif'
 #    str_hand_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMhand.tif'
-#    str_hand_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_hand.tif'
+    str_hand_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_hand.tif'
 #    str_hand_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_hand.tif'
+#    str_hand_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600060202_LittlePatuxentRiver\facet\littlepawtuxent_dem_utm18_breach_hand.tif"
     
     ## << SHEDS >>
-#    str_sheds_path = '/home/sam.lamont/USGSChannelFPMetrics/testing/dr3m_sheds_diss2.shp'   
+    str_sheds_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600060202_LittlePatuxentRiver\facet\littlepawtuxent_dem_utm18_breach_w_diss.shp" 
     
     ## << DANGLE POINTS >>
 #    str_startptgrid_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMnet_UNIQUE_ID.shp'
@@ -503,8 +504,12 @@ if __name__ == '__main__':
     parm_slpthresh = 0.03
     p_fpxnlen = 100 # meters (if UTM) ??
     
+    # =========================================================================================
+    #                                   Functions    
+    # =========================================================================================
+    
     # << Get cell size directly from grid >>
-#    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
+    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
   
 ##    # << Build Streamline Coordinates >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
@@ -514,7 +519,7 @@ if __name__ == '__main__':
 #    df_coords.to_csv('df_coords_020802.csv') # just for testing
     
 #    print('NOTE:  Reading pre-calculated csv file...')
-#    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
+    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )
 #    df_coords = pd.read_csv('df_coords_020802.csv', )    
 #    streamlines_crs = {'init': u'epsg:26918'}
@@ -527,13 +532,15 @@ if __name__ == '__main__':
 ##    # << Channel Width via Bank Pixels >>    
 #    funcs_v2.channel_width_bankpixels(str_net_path, str_bankpixels_path, str_reachid, cell_size)    
 #    funcs_v2.channel_width_bankpixels_segments(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
-#    funcs_v2.channel_and_fp_width_bankpixels_segments_po(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path)
     
 #     << FLOODPLAIN WIDTH >> 
 #    buff_dist = 40
 #    funcs_v2.floodplain_width_2D_xns(str_xns_path, str_floodplain_path, buff_dist)
 #    funcs_v2.floodplain_width_fppixels_segments_po(df_coords, str_net_in_path, str_floodplain_path, str_reachid, cell_size)
 #    funcs_v2.floodplain_width_reach_buffers_po(funcs, str_net_path, str_fp_path, str_reachid, cell_size)
+    
+    # << CHANNEL WIDTH, FLOODPLAIN WIDTH, HAND ANALYSIS ALL IN ONE >>
+    funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path, parm_ivert)    
 
 #      << Find bank pixels using moving window along streamline >>
 #    funcs_v2.fp_from_streamline_window(df_coords, str_dem_path, str_fp_path)
@@ -590,19 +597,17 @@ if __name__ == '__main__':
 #    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
     str_mpi_path=r'"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe"'
     str_taudem_dir=r'"C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
-#    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\GoSpatial\go-spatial_win_amd64.exe' # Go version
-    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe' # Rust version
+    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\GoSpatial\go-spatial_win_amd64.exe' # Go version
+#    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
     
     
     # def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_path, str_whitebox_path, run_whitebox, run_wg, run_taudem):
     
-    run_whitebox = True
-    run_wg = False
-    run_taudem = False
-    
-    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)
-    
-
+#    run_whitebox = True
+#    run_wg = False
+#    run_taudem = False
+#    
+#    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
     
     print('\n<<< End >>>\r\n')
     print('Run time:  {}'.format(timeit.default_timer() - start_time_0))
