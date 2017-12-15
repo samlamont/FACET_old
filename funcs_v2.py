@@ -1188,7 +1188,7 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
     chan_width_hand = -9999.
     
     fp_height = 2.0 # How to get this?  By reach?
-    p_fitlength=30  # For FP Xn's
+#    p_fitlength=30  # For FP Xn's
     
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
     head, tail = os.path.split(str_streamlines_path)    
@@ -1202,6 +1202,9 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
     
     # Access the floodplain grid...
     with rasterio.open(str(str_hand_path)) as ds_hand:
+        
+        out_meta = ds_hand.meta.copy()
+        arr_out_pixels = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])                                  
         
         # Access the bankpts layer...
         with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
@@ -1223,7 +1226,7 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
     #                    j+=1                    
                 
                         i_linkno = int(i_linkno)
-                        max_indx = len(df_linkno.index) - 1
+#                        max_indx = len(df_linkno.index) - 1
                         
                         if i_linkno <> 185:
                             continue
@@ -1346,17 +1349,16 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                             geom_fpls_buff = fp_ls.buffer(fp_buff_dist, cap_style=2)
                             buff = mapping(geom_fpls_buff)
                             
-                            if i_seg==5:
-                                # Write out buffer polygon(s)...NOTE:  Could write out ind
-                                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
-                                    buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
-                                sys.exit()                              
+#                            if i_seg==5:
+#                                # Write out buffer polygon(s)...NOTE:  Could write out ind
+#                                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
+#                                    buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
+#                                break                              
                             
                             # Mask the bankpts file for each feature...
                             out_image, out_transform = rasterio.mask.mask(ds_hand, [buff], crop=True)
                             
                             # Count the number of pixels in the buffered Xn...
-#                            num_pixels = len(out_image[out_image==1]) # this assumes HAND has already been sliced
                             num_pixels = out_image[(out_image<=fp_height)&(out_image>=0.)].size
                              
                             # Calculate area of FP pixels...
@@ -1370,14 +1372,47 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                             
                             if fp_width<0.: fp_width = 0 # don't have negatives              
 
-                            # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>                            
-#                            if (i_seg >= 30) and (i_seg <= 35):                                
-                            bank_height_hand, chan_width_hand = analyze_hand_buff(out_image, fp_buff_dist, ds_hand.res[0], parm_ivert)
+                            # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>                                                       
+                            bank_height_hand, chan_width_hand = analyze_hand_poly(out_image, fp_buff_dist, ds_hand.res[0], parm_ivert)
+                            
+                            # Write back the in-channel pixels to a tif...                                                
+                            out_image = out_image[0]                                                        
+                            shp=np.shape(out_image)                                
+                            bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)                                
+                            col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3]) # upper left row and column of window?                                
+                            
+                            row_min = np.int(row_min)                            
+                            col_min = np.int(col_min)
+                            row_max = np.int(row_min + shp[0])
+                            col_max = np.int(col_min + shp[1])
+                          
+                            out_image[out_image<0] = 9999. # no data values
+                            out_image[out_image<=bank_height_hand] = 1.
+                            out_image[out_image>bank_height_hand] = 0.
+            
+                            arr_out_pixels[row_min:row_max, col_min:col_max] = out_image + arr_out_pixels[row_min:row_max, col_min:col_max] #bool_fp.astype(out_meta['dtype'])
+    
+
+#                            break                              
+                           
+                        
+                            
+#                                out_meta.update({"driver": "GTiff",
+#                                                 "height": out_image.shape[1],
+#                                                 "width": out_image.shape[2],
+#                                                 "transform": out_transform})                                                                                      
+                            
+#                                output_pixels.write(out_image)                                                            
                             
 #                            if i_seg > 35: sys.exit()
                             
-                            # Write to an output file here...
+                            # Write to the output shapefile here...
                             output.write({'properties':{'linkno':i_linkno, 'ch_wid_total': weighted_avg_left+weighted_avg_rt, 'ch_wid_1': weighted_avg_left, 'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl, 'dist':dist, 'sinuosity': sinuosity, 'fp_width':fp_width, 'bh_hand':bank_height_hand,'cw_hand':chan_width_hand}, 'geometry':mapping(ls)})                            
+                            
+    print('Writing .tif file...')   
+    str_fp_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_test_pixels.tif'
+    with rasterio.open(str_fp_path, "w", **out_meta) as dest:
+        dest.write(arr_out_pixels, indexes=1)                              
 
     return
 
@@ -1655,7 +1690,7 @@ def channel_width_bankpixels(str_streamlines_path, str_bankpixels_path, str_reac
 # ===============================================================================
 #  Analyze DEM in vertical slices using an individual polygon
 # =============================================================================== 
-def analyze_hand_buff(w, fp_buff_dist, res, i_interval):
+def analyze_hand_poly(w, fp_buff_dist, res, i_interval):
                         
     i_rng=10
     arr_slices = np.arange(i_interval, i_rng, i_interval)    
@@ -1678,7 +1713,7 @@ def analyze_hand_buff(w, fp_buff_dist, res, i_interval):
 
     df_steps = pd.DataFrame({'count':lst_count, 'height':arr_slices, 'width':lst_width})
     
-    df_steps.plot(x='width',y='height', marker='.')        
+#    df_steps.plot(x='width',y='height', marker='.')        
 #            sys.exit()
     
     # Slope of width...
@@ -1703,7 +1738,7 @@ def analyze_hand_buff(w, fp_buff_dist, res, i_interval):
 # ===============================================================================    
 def analyze_hand_reach_buffers(str_net_path, str_hand_path, str_reachid):    
     
-    cell_size = 3
+#    cell_size = 3
     
     # Open the bankpts layer...
     with rasterio.open(str(str_hand_path)) as ds_hand:
