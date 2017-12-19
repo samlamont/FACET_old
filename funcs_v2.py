@@ -12,8 +12,9 @@ import timeit
 import numpy as np
 from numpy import asarray
 
-from scipy.stats import gaussian_kde # TEST
-from scipy.optimize import curve_fit # TEST
+#from scipy.stats import gaussian_kde # TEST
+#from scipy.optimize import curve_fit # TEST
+from scipy import signal
 
 import os
 #import ntpath
@@ -77,18 +78,45 @@ np.seterr(over='raise')
 
 # lstThisSegmentRows, lstThisSegmentCols, midpt_x, midpt_y, p_fpxnlen
 
+# ================================================================================
+#   For wavelet curvature calculation (Chandana)
+# ================================================================================
+def gauss_kern(sigma):    
+    """ Returns a normalized 2D gauss kernel array for convolutions """ 
+
+    sigma=int(sigma)
+
+    x, y =np.mgrid[-5*sigma:5*sigma, -5*sigma:5*sigma]
+
+    g2x = (1-x**2/sigma**2)*np.exp(-(x**2+y**2)/2/sigma**2)*1/np.sqrt(2*np.pi*sigma**2)/ 4 / sigma * np.exp(float(0.5));
+    g2y = (1-y**2/sigma**2)*np.exp(-(x**2+y**2)/2/sigma**2)*1/np.sqrt(2*np.pi*sigma**2)/ 4 / sigma * np.exp(float(0.5));
+  
+
+    return g2x, g2y
+    
+# ================================================================================
+#   For 2D cross sectional measurement
+# ================================================================================    
 def build_fp_xn(lstThisSegmentRows, lstThisSegmentCols, midPtCol, midPtRow, p_xnlength):
     
     slopeCutoffVertical = 20 # another check
-    
-    
-    if (max(lstThisSegmentCols) - min(lstThisSegmentCols) < 3):
+        
+    # Find initial slope...
+    if (abs(lstThisSegmentCols[0] - lstThisSegmentCols[-1]) < 3):
         m_init = 9999.0
-    elif (max(lstThisSegmentRows) - min(lstThisSegmentRows) < 3):
+    elif (abs(lstThisSegmentRows[0] - lstThisSegmentRows[-1]) < 3):
         m_init = 0.0001
     else:
-        LinFit = np.polyfit(lstThisSegmentCols,lstThisSegmentRows,1) # NOTE: could just use basic math here instead?!
-        m_init = LinFit[0]
+        m_init = (lstThisSegmentRows[0] - lstThisSegmentRows[-1])/(lstThisSegmentCols[0] - lstThisSegmentCols[-1]) 
+        
+        
+#    if (max(lstThisSegmentCols) - min(lstThisSegmentCols) < 3):
+#        m_init = 9999.0
+#    elif (max(lstThisSegmentRows) - min(lstThisSegmentRows) < 3):
+#        m_init = 0.0001
+#    else:
+#        LinFit = np.polyfit(lstThisSegmentCols,lstThisSegmentRows,1) # NOTE: could just use basic math here instead?!
+#        m_init = LinFit[0]
 
     # Check for zero or infinite slope...
     if m_init == 0:
@@ -1217,6 +1245,9 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                 # Get the crs...
                 streamlines_crs = streamlines.crs                
                 
+#                # For writing out the buffers...
+#                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
+                    
                 # Open another file to write the width...
                 with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
                     
@@ -1273,7 +1304,7 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                                         
             #                            # Write out buffer polygon(s)...NOTE:  Could write out ind
             #                            with fiona.open(r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\buffer.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
-            #                                buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
+#                                            buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
             #                            sys.exit()                    
 
                                         # Mask the bankpts file for each feature...
@@ -1327,6 +1358,9 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                                 print('Error calculating weighted average of buffer distance. Exception: {} \n'.format(e))
 #                                continue                                                                                                                        
                             
+                            if i_seg == 33:
+                                print('puase')                                
+                            
                             # << FP Width Here >>                            
                             midpt_indx = int(len(arr_x)/2)
                                                      
@@ -1352,7 +1386,7 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
 #                            if i_seg==5:
 #                                # Write out buffer polygon(s)...NOTE:  Could write out ind
 #                                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
-#                                    buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
+#                                buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
 #                                break                              
                             
                             # Mask the bankpts file for each feature...
@@ -1387,24 +1421,14 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                             col_max = np.int(col_min + shp[1])
                           
                             out_image[out_image<0] = 9999. # no data values
-                            out_image[out_image<=bank_height_hand] = 1.
+#                            out_image[out_image<=bank_height_hand] = 1.
                             out_image[out_image>bank_height_hand] = 0.
             
-                            arr_out_pixels[row_min:row_max, col_min:col_max] = out_image + arr_out_pixels[row_min:row_max, col_min:col_max] #bool_fp.astype(out_meta['dtype'])
-    
-
-#                            break                              
-                           
-                        
+                            # Re-assing channel pixels...
+#                            arr_out_pixels[row_min:row_max, col_min:col_max] = out_image + arr_out_pixels[row_min:row_max, col_min:col_max] #bool_fp.astype(out_meta['dtype'])
                             
-#                                out_meta.update({"driver": "GTiff",
-#                                                 "height": out_image.shape[1],
-#                                                 "width": out_image.shape[2],
-#                                                 "transform": out_transform})                                                                                      
-                            
-#                                output_pixels.write(out_image)                                                            
-                            
-#                            if i_seg > 35: sys.exit()
+                            # Or take the average between new pixels and previous pixels...
+                            arr_out_pixels[row_min:row_max, col_min:col_max] = arr_out_pixels[row_min:row_max, col_min:col_max] + (out_image + arr_out_pixels[row_min:row_max, col_min:col_max])/2
                             
                             # Write to the output shapefile here...
                             output.write({'properties':{'linkno':i_linkno, 'ch_wid_total': weighted_avg_left+weighted_avg_rt, 'ch_wid_1': weighted_avg_left, 'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl, 'dist':dist, 'sinuosity': sinuosity, 'fp_width':fp_width, 'bh_hand':bank_height_hand,'cw_hand':chan_width_hand}, 'geometry':mapping(ls)})                            
@@ -2814,38 +2838,33 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
     
     try:
         
+        sigma=1.0 # select the scale sigma=1 --> NOTE:  FIND THIS ON THE FLY? (within each window?)
+        g2x1,g2y1 = gauss_kern(sigma) 
+        
         with rasterio.open(str_dem_path) as ds_dem:
-            
-    #        nodata_val = ds_dem.nodata
         
             # Transform to pixel space
-    #        df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])
-            df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])   
+            df_coords['col'], df_coords['row'] = ~ds_dem.transform * (df_coords['x'], df_coords['y'])   
             
             df_coords[['row','col']] = df_coords[['row','col']].astype(np.int32)  
             df_coords.drop_duplicates(['col','row'], inplace=True) # rounding to integer
             total_len = len(df_coords.index)
             
-            out_meta = ds_dem.meta.copy()  
-    
+            out_meta = ds_dem.meta.copy()      
             
             arr_bankpts=np.zeros([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
-    #        arr_bankpts=out_meta['nodata']
             
     #        progBar.setRange(0, len(df_coords.index)) 
             
             for tpl_row in df_coords.itertuples():
                 
-    #            if j > 250000:
-    #                break
+#                if tpl_row.linkno <> 185:
+#                    continue
                 
     #            progBar.setValue(j)
                 j+=1
                 
                 print('{} | {} -- {}'.format(tpl_row.linkno, j, total_len))
-                
-    #            if (tpl_row.linkno == 111) or (tpl_row.linkno == 106) or (tpl_row.linkno == 139):
-    #                continue
                 
                 row_min = np.int(tpl_row.row - np.int(w_height/2))
                 row_max = np.int(tpl_row.row + np.int(w_height/2))
@@ -2856,62 +2875,60 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                 w = ds_dem.read(1, window=((row_min, row_max),(col_min, col_max))) 
                                 
                 # Then extract the internal part of the window that contains the rotated window??
-                
-    #            w_laplace = ndimage.filters.laplace(w)
-    #            w_sobel_x = ndimage.sobel(w, axis=0, mode='constant')
-    #            w_sobel_y = ndimage.sobel(w, axis=1, mode='constant')
-    #            w_sobel = np.hypot(w_sobel_x, w_sobel_y)
-                
                 w[w>9999999.0] = 0.0 # NoData values may have been corrupted by preprocessing?
                 
                 if np.size(w) > 9: # make sure a window of appropriate size was returned from the DEM
-    
-                    # Calculate curvature...
-    #                w_dw_x, w_dw_y = np.gradient(w, cell_size)
-    #                w_ddw_x, temp1 = np.gradient(w_dw_x, cell_size)
-    #                temp2, w_ddw_y = np.gradient(w_dw_y, cell_size)            
-    #                w_curve = w_ddw_x + w_ddw_y
-    #                del temp1, temp2, w_dw_x, w_dw_y, w_ddw_x, w_ddw_y
-                                
-                    Zy, Zx = np.gradient(w, cell_size)
-                    Zxy, Zxx = np.gradient(Zx, cell_size)
-                    Zyy, _ = np.gradient(Zy, cell_size)                            
+                
+                    # === Wavelet Curvature from Chandana ===
+                    gradfx1 = signal.convolve2d(w, g2x1, boundary='symm', mode='same') 
+                    gradfy1 = signal.convolve2d(w, g2y1, boundary='symm', mode='same')     
                     
-    #                # OR, gaussian curvature? (http://stackoverflow.com/questions/11317579/surface-curvature-matlab-equivalent-in-python)
-    #                w_curve = (Zxx * Zyy - (Zxy ** 2)) /  (1 + (Zx ** 2) + (Zy **2)) ** 2
+                    w_curve=gradfx1+gradfy1
                     
-                    try:
-                        # OR, mean curvature...
-                        w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
-                        w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
-                    except:
-                        print('pause')
+#                    test = np.std(w_curve)
 
-                    
+                    # Pick out bankpts...                    
                     w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
+                    
+#                    plt.imshow(lum_img, cmap="hot") #, vmin=-2, vmax=2)   
+#                    plt.colorbar()    
+#                    fig = plt.figure()
+#                    n, bins, patches=plt.hist(w_curve.flatten(), bins=256, range=(-5, 5), fc='k', ec='k')    # get the histogram
+#                    plt.xlabel('Curvature')
+#                    plt.ylabel('Probability')
+#                    plt.title('Histogram')                    
+#                    plt.show()      
+#                    
+#                    if j > 4:
+#                        sys.exit()
+                    # =======================================
+    
+#                    # === Mean Curvature ====================                                
+#                    Zy, Zx = np.gradient(w, cell_size)
+#                    Zxy, Zxx = np.gradient(Zx, cell_size)
+#                    Zyy, _ = np.gradient(Zy, cell_size)                                                
+#              
+#                    try:
+#                        # OR, mean curvature...
+#                        w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
+#                        w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
+#                    except:
+#                        print('pause')
+#                        
+##                    plt.imshow(w_curve)
+#
+##                    sys.exit()
+#                    
+#                    
+#                    w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
+#                    
+#                    # =======================================
                     
                     w_curve[w_curve<-99999999.] = 0.
                     w_curve[w_curve>99999999.] = 0.
-    #                w_curve = np.ma.masked_less(w_curve, np.max(w_curve)*0.40) # for plotting?
-                    
+
                     arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
                     
-    #                if tpl_row.linkno == 8574501:
-    #                    fig, ax = plt.subplots()
-    #                    im = ax.imshow(w_curve, cmap='gist_rainbow')
-    #                    fig.colorbar(im, orientation='vertical')
-    #                    plt.show()     
-    #                    break
-                        
-    #                w_laplace = ndimage.filters.laplace(w_curve)    
-    #    #            w_laplace = np.ma.masked_less(w_laplace, np.max(w_laplace)*0.30)  # 0.30 for 3 m seems to work well  
-    #                w_laplace[w_laplace<np.max(w_laplace)*0.30] = out_meta['nodata']               
-    #                arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_laplace[buff:w_height-buff, buff:w_width-buff]
-    
-    
-#            arr_bankpts[arr_bankpts<0.] = np.nan
-#            arr_bankpts[arr_bankpts>999999999990.] = out_meta['nodata']
-#            arr_bankpts[arr_bankpts>999999999.] = np.nan 
             
             print('Writing bankpts .tif...')
             with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
