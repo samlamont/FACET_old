@@ -527,6 +527,12 @@ if __name__ == '__main__':
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )
 #    df_coords = pd.read_csv('df_coords_020802.csv', )    
     streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N
+    
+    str_diss_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_diss.shp'
+#    funcs_v2.dissolve_line_features(str_net_path, str_diss_path)
+    
+    str_pts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_pts.shp'
+    funcs_v2.points_along_line_features(str_diss_path, str_pts_path)
 #   
 #    # << Find bank pixels using moving window along streamline >>
 #    funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size) # YES!
@@ -540,7 +546,7 @@ if __name__ == '__main__':
 #    funcs_v2.floodplain_width_reach_buffers_po(funcs, str_net_path, str_fp_path, str_reachid, cell_size)
     
     # << CHANNEL WIDTH, FLOODPLAIN WIDTH, HAND ANALYSIS ALL IN ONE >>
-    funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_buffxnlen, str_hand_path, parm_ivert)    
+#    funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_buffxnlen, str_hand_path, parm_ivert)    
     
     # << CREATE Xn SHAPEFILES >>
     # Channel...
