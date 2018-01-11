@@ -204,6 +204,34 @@ def points_along_line_features(str_diss_lines_path, output_filename):
         
     return
     
+    
+# ==========================================================================
+#   For points along line feature at uniform distance    
+# ==========================================================================    
+def taudem_gagewatershed(str_pts_path, str_d8fdr_path):
+    print('Points along line features...')
+    
+    inputProc = str(4)
+    
+    str_output_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_test_sheds.tif'
+    
+    cmd = 'mpiexec -n ' + inputProc + ' GageWatershed -p ' + '"' + str_d8fdr_path + '"' + ' -o ' + '"' + str_pts_path + '"'  +  ' -gw ' + '"' + str_output_path + '"'
+    
+    # Submit command to operating system
+    print('Running TauDEM GageWatershed...')
+    os.system(cmd)
+    # Capture the contents of shell command and print it to the arcgis dialog box
+    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    
+    message = "\n"
+    for line in process.stdout.readlines():
+        if isinstance(line, bytes):	    # true in Python 3
+            line = line.decode()
+        message = message + line
+    print(message)                               
+        
+    return
+    
 # ==========================================================================
 #   For clipping features  
 # ==========================================================================         
@@ -999,8 +1027,6 @@ def fim_hand_poly(str_hand_path, str_sheds_path):
 #                
                 inds_lt = np.where(arr_fim[row_min:row_max, col_min:col_max]<w)
                 arr_w[inds_lt] = w[inds_lt]
-
-#                arr_fim[] = w
 
                 arr_fim[row_min:row_max, col_min:col_max] = arr_w # assign the FIM window for this catchment to the total array                    
     
