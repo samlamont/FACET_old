@@ -948,6 +948,70 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
         dest.write(arr_out_pixels, indexes=1)                              
 
     return   
+
+# ===============================================================================
+#  Delineate a FIM from the HAND grid using depth at each polygon (eg, catchment)
+#
+#    1. Read in catchment polygons (assume these have attributes necessary for regression?)
+#    2. Calculate a HAND height (h) for each polygon based on some attribute(s)
+#    3. Delineate FIM per catchment
+#
+# =============================================================================== 
+def fim_hand_poly(str_hand_path, str_sheds_path):
+    
+    # Open the HAND layer...
+    with rasterio.open(str(str_hand_path)) as ds_hand:  
+        
+        out_meta = ds_hand.meta.copy()
+        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
+        arr_fim[:,:] = out_meta['nodata']
+        
+        # Open the catchment polygon layer...
+        with fiona.open(np.str(str_sheds_path), 'r') as sheds:
+        
+            for shed in sheds:
+                
+                # Get HAND height (h) here based on shed properties and regression eqn
+                h = 2.
+                
+#                buff = mapping(shed)                            
+                
+                # Mask the bankpts file for each feature...
+                w, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)            
+        
+#                w[(w<=h) & (w>=0.)] # Get HAND depth below h
+                w[(w>h)] = out_meta['nodata'] # Assign NoData to everywhere else
+#                w[(w<0.)] = out_meta['nodata'] # Assign NoData to everywhere else
+                
+                # Now write out the FIM for this shed...
+                w = w[0]                                                        
+                shp=np.shape(w)                                
+                bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)                                
+                col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3]) # upper left row and column of window?                                
+                
+                row_min = np.int(row_min)                            
+                col_min = np.int(col_min)
+                row_max = np.int(row_min + shp[0])
+                col_max = np.int(col_min + shp[1])    
+
+                arr_w = np.empty([row_max-row_min, col_max-col_min], dtype=out_meta['dtype'])
+                arr_w[:,:] = arr_fim[row_min:row_max, col_min:col_max]
+#                
+                inds_lt = np.where(arr_fim[row_min:row_max, col_min:col_max]<w)
+                arr_w[inds_lt] = w[inds_lt]
+
+#                arr_fim[] = w
+
+                arr_fim[row_min:row_max, col_min:col_max] = arr_w # assign the FIM window for this catchment to the total array                    
+    
+    # Write out the final FIM grid...
+    print('Writing final FIM .tif file...')   
+    str_fim_path = str_hand_path[:-4]+'_fim.tif'
+    with rasterio.open(str_fim_path, "w", **out_meta) as dest:
+        dest.write(arr_fim, indexes=1)    
+        
+    return 
+    
 # ===============================================================================
 #  Analyze DEM in vertical slices using an individual polygon
 # =============================================================================== 

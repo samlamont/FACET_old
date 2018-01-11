@@ -467,12 +467,12 @@ if __name__ == '__main__':
 
     ## << HAND >>    
 #    str_hand_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMhand.tif'
-    str_hand_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_hand.tif'
+    str_hand_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\facet\DEM_utm18_breach_hand.tif"
 #    str_hand_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_hand.tif'
 #    str_hand_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600060202_LittlePatuxentRiver\facet\littlepawtuxent_dem_utm18_breach_hand.tif"
     
     ## << SHEDS >>
-    str_sheds_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600060202_LittlePatuxentRiver\facet\littlepawtuxent_dem_utm18_breach_w_diss.shp" 
+    str_sheds_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\facet\quittapahilla_utm18_breach_sheds.shp"
     
     ## << START POINTS >>
 #    str_startptgrid_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMnet_UNIQUE_ID.shp'
@@ -512,10 +512,10 @@ if __name__ == '__main__':
     #                                   Functions    
     # =========================================================================================
     
-    # << Get cell size directly from grid >>
+    # << GET CELL SIZE >>
     cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
   
-##    # << Build Streamline Coordinates >>
+##    # << BUILD STREAMLINES COORDINATES >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
 #    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
 #    df_coords.to_csv('df_coords_Chillisquaque.csv') # just for testing
@@ -523,18 +523,23 @@ if __name__ == '__main__':
 #    df_coords.to_csv('df_coords_020802.csv') # just for testing
     
 #    print('NOTE:  Reading pre-calculated csv file...')
-    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
+#    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )
 #    df_coords = pd.read_csv('df_coords_020802.csv', )    
-    streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N
+#    streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N
     
-    str_diss_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_diss.shp'
+    
+    # << UNIFORM REACH POINTS AND CATCHMENTS >>    
+#    str_diss_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_diss.shp'
 #    funcs_v2.dissolve_line_features(str_net_path, str_diss_path)
     
-    str_pts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_pts.shp'
-    funcs_v2.points_along_line_features(str_diss_path, str_pts_path)
+#    str_pts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_pts.shp'
+#    funcs_v2.points_along_line_features(str_diss_path, str_pts_path)
+    
+    # << FIM FROM HAND AND CATCHMENTS >>
+    funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path) # NOTE:  Will need to know which regression eqn to use?
 #   
-#    # << Find bank pixels using moving window along streamline >>
+#    # << BANK PIXELS FROM CURVATURE >>
 #    funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size) # YES!
 #    funcs_v2.bankpixels_from_openness_window(df_coords, str_pos_path, str_bankpixels_path) 
 #    funcs_v2.bankpixels_from_openness_window_buffer_all(df_coords, str_dem_path, str_net_path, str_pos_path, str_neg_path) 
