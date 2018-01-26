@@ -557,9 +557,9 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #                print("ERROR: return value={}".format(ret))    
                 
             # Rust version...
-            name = "ConvertRasterFormat"
-            args = ['--input='+dem_filename, '-o='+dem_filename_tif]
-            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)                
+#            name = "ConvertRasterFormat"
+#            args = ['--input='+dem_filename, '-o='+dem_filename_tif]
+#            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)                
         
         # TEST.  NOTE: Need to update spatial reference on .tifs here!
 #        with rasterio.open(path_to_dem + '\\' + breach_filename_tif, 'r') as dem_tif: # , crs='EPSG:26918'

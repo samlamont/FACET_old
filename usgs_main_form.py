@@ -403,8 +403,8 @@ if __name__ == '__main__':
 ##    str_dem_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEM_02050205_USGS_AEA.tif'
 #    str_dem_path = '/home/sam.lamont/USGSChannelFPMetrics/drb/test_gis/DEMfel_dem_post.tif'
 #    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_dem_clip_utm18.tif'
-#    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18.tif'
-    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18.tif'
+    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\sam_test\dr3m_raw_dem_clip_utm18.tif'
+#    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020801030602_RappahannockRiver\corrected\rappahannock_filled_utm18.tif"
 #    str_dem_path = r'D:\fernando\HAND\020802\020802_utm.tif' # 10 m
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM.tif'
 #    str_dem_path = r'D:\CFN_data\DEM_Files\020503010802_MahantangoCreek\DEM.tif'    
@@ -533,10 +533,10 @@ if __name__ == '__main__':
 #    str_diss_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_diss.shp'
 #    funcs_v2.dissolve_line_features(str_net_path, str_diss_path)
     
-    str_pts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_pts.shp'
+#    str_pts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_net_pts.shp'
 #    funcs_v2.points_along_line_features(str_diss_path, str_pts_path)
     
-    str_d8fdr_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_p.tif"
+#    str_d8fdr_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_p.tif"
 #    funcs_v2.taudem_gagewatershed(str_pts_path, str_d8fdr_path)
     
     # << FIM FROM HAND AND CATCHMENTS >>
@@ -584,8 +584,8 @@ if __name__ == '__main__':
 #    funcs_v2.clip_features(str_net_in_path, str_output_nhdhires_path, str_dem_path)     
     
 #    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
-    str_mpi_path=r'"C:\Program Files\Microsoft MPI\Bin\mpiexec.exe"'
-    str_taudem_dir=r'"C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
+    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
+    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
     str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\GoSpatial\go-spatial_win_amd64.exe' # Go version
 #    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
     
