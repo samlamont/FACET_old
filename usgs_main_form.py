@@ -8,8 +8,8 @@ Created on Tue Dec  6 16:11:00 2016
 import glob
 import timeit
 from PyQt4 import QtCore, QtGui, uic
-import sys
-#import numpy as np
+#import sys
+import numpy as np
 #from numpy import array
 #from scipy import ndimage
 import os
@@ -23,6 +23,9 @@ import fiona
 #from math import isinf, sqrt #, hypot, modf, atan, ceil
 #import matplotlib.pyplot as plt
 import pandas as pd
+
+from functools import partial
+import multiprocessing
 
 import funcs_v2 
 #from funcs_v2 import workerfuncs
@@ -430,13 +433,13 @@ if __name__ == '__main__':
       
     ## << BANK PIXELS >>   
 #    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
-    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\bankpixels_raw_dem_wavelet_1.0_std.tif'
+#    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\bankpixels_raw_dem_wavelet_1.0_std.tif'
 #    str_bankpixels_path =r'D:\fernando\HAND\020802\0202802_utm_bankpixels.tif'
 #    str_bankpixels_path =r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_bankpixels.tif'
     
     ## << BANK POINTS >>    
 #    str_bankpts_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpts_TEST.shp'
-    str_bankpts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr_bankpts_test.shp'
+#    str_bankpts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr_bankpts_test.shp'
  
     ## << FLOODPLAIN >>
 #    str_floodplain_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_breach_hand_slice2.3.tif'    
@@ -444,7 +447,7 @@ if __name__ == '__main__':
     ## << CROSS SECTIONS >>    
 #    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\chan_xns_TEST.shp'
 #    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\fp_xns.shp'
-    str_xns_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr_xns_test.shp'
+#    str_xns_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr_xns_test.shp'
 
     ## << HAND >>    
 #    str_hand_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMhand.tif'
@@ -488,48 +491,95 @@ if __name__ == '__main__':
     parm_ratiothresh = 1.5
     parm_slpthresh = 0.03
     p_buffxnlen = 30 # meters (if UTM) ??
+    p_xngap = 3
     
     # =========================================================================================
     #                                   Functions    
     # =========================================================================================
     
+    
+    #=============================================================================================== 
+    #                             BEGIN BULK PROCESSING LOOP
+    #===============================================================================================    
+    
     ## << FOR BULK PROCESSING >>
-    lst_paths = glob.glob("B:\Terrain\DelawareRiverBasin\DEMs_3m\*")
+    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
     
-    for path in lst_paths:
+    for i, path in enumerate(lst_paths):
+        
+        if i > 0: break
+        
+        start_time_i = timeit.default_timer()
     
-        str_dem_path = glob.glob(path + '/*dem*.tif')
-        str_hand_path = glob.glob(path + '/*hand*.tif')
-        str_net_path = glob.glob(path + '/*net*.shp')  
+        str_dem_path = glob.glob(path + '/*dem*.tif')[0]
+        str_hand_path = glob.glob(path + '/*hand*.tif')[0]
+        str_net_path = glob.glob(path + '/*net*.shp')[0]  
+        
+        path_to_dem, dem_filename = os.path.split(str_dem_path)
+        csv_filename = dem_filename[:-8] + '.csv'
+        str_csv_path = path_to_dem + '\\' + csv_filename
+        
+        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
+        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
         
         # << GET CELL SIZE >>
         cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 
         # << BUILD STREAMLINES COORDINATES >>
-        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords.to_csv(str_csv_path)
+        df_coords = pd.read_csv(str_csv_path, )    
+        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
 
+        # ============================= CROSS SECTION ANALYSES =====================================
         # << CREATE Xn SHAPEFILES >>
         # Channel...
-        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
+#        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
 
-        # << INTERPOLATE ELEVATIN ALONG Xns >>
+        # << INTERPOLATE ELEVATION ALONG Xns >>
         df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
         
         # Calculate channel metrics and write bank point shapefile...
-        print('Calculating channel metrics from bank points...')
-        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-
         
-    #------------------------------------------------------------------------------------------
+        # << BEGIN TEST MULTIPROCESSING >>
+        # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
+        xn_count = funcs_v2.get_feature_count(str_xns_path)
+        
+        # Striding...
+        arr_strides = np.linspace(0, xn_count, xn_count/100)
+        arr_strides = np.delete(arr_strides,0)   
+        
+        lst_arr_strides = np.array_split(arr_strides, 100)
+
+        func = partial(funcs_v2.chanmetrics_bankpts, df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+        
+        pool = multiprocessing.Pool(processes=10)
+        
+        lst_final = pool.map(func, lst_arr_strides)        
+        
+        # << END TEST MULTIPROCESSING >>
+        
+        # NOTE:  Use raw DEM here??
+#        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+
+        print('Run time for this watershed:  {}'.format(timeit.default_timer() - start_time_i))
+        
+        break
+        # ==================== CHANNEL WIDTH, FLOODPLAIN WIDTH, HAND ANALYSIS ALL IN ONE ===========
+#        funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_buffxnlen, str_hand_path, parm_ivert)    
+        
+    
+    #=============================================================================================== 
+    #                               END BULK PROCESSING LOOP
+    #===============================================================================================
     # << GET CELL SIZE >>
-    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
+#    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
   
 ##    # << BUILD STREAMLINES COORDINATES >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
-    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
+#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
+    
 #    df_coords.to_csv('df_coords_Chillisquaque.csv') # just for testing
-#    df_coords.to_csv('df_coords_DifficultRun.csv') # just for testing
-#    df_coords.to_csv('df_coords_020802.csv') # just for testing
     
 #    print('NOTE:  Reading pre-calculated csv file...')
 #    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
@@ -566,24 +616,24 @@ if __name__ == '__main__':
 #    funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_buffxnlen, str_hand_path, parm_ivert)    
     
     # << CREATE Xn SHAPEFILES >>
-    # Channel...
-    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
-    # FP...
-#    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), True, int(30), int(30), float(100))  # For FP width testing
-
-#    # << INTERPOLATE ELEVATIN ALONG Xns >>
-    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
-    
-#    print('Writing df_xn_elev to .csv for testing...')
-#    df_xn_elev.to_csv(columns=['index','linkno','elev','xn_row','xn_col']) 
-#    df_xn_elev2 = pd.read_csv('df_xn_elev.csv') #, dtype={'linko':np.int,'elev':np.float,'xn_row':np.float,'xn_col':np.float})
-    
-    # Loop over df_xn_elev here to determine the flow direction/slope from one Xn midpoint to the next?
- 
-    # Calculate channel metrics and write bank point shapefile...
-    print('Calculating channel metrics from bank points...')
-    funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-     
+#    # Channel...
+#    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
+#    # FP...
+##    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), True, int(30), int(30), float(100))  # For FP width testing
+#
+##    # << INTERPOLATE ELEVATIN ALONG Xns >>
+#    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+#    
+##    print('Writing df_xn_elev to .csv for testing...')
+##    df_xn_elev.to_csv(columns=['index','linkno','elev','xn_row','xn_col']) 
+##    df_xn_elev2 = pd.read_csv('df_xn_elev.csv') #, dtype={'linko':np.int,'elev':np.float,'xn_row':np.float,'xn_col':np.float})
+#    
+#    # Loop over df_xn_elev here to determine the flow direction/slope from one Xn midpoint to the next?
+# 
+#    # Calculate channel metrics and write bank point shapefile...
+#    print('Calculating channel metrics from bank points...')
+#    funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+#     
      # << DEM PRE-PROCESSING using TauDEM and GoSpatial >>              
     # (1) Clip original streamlines layer (NHD hi-res 4 digit HUC to DEM of interest)...     
     # Build the output streamlines file name...
@@ -605,7 +655,7 @@ if __name__ == '__main__':
 #    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
     
     print('\n<<< End >>>\r\n')
-    print('Run time:  {}'.format(timeit.default_timer() - start_time_0))
+    print('Total Run Time:  {}'.format(timeit.default_timer() - start_time_0))
 #     =====================================================================================
 
 #    # ===== Run GUI ==============================

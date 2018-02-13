@@ -1706,17 +1706,19 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
 #  Calculate channel metrics based on the bankpoint slope-threshold method at each Xn,
 #   writing the bank points to a shapefile 
 # ====================================================================================
-def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh): 
+def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh, arr_strides): 
        
     print('Channel metrics from bank points...')    
     
-    # << BEGIN LOOP >>
-    # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
-    xn_count = get_feature_count(str_xnsPath)
+#    # << BEGIN LOOP >>
+#    # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
+#    xn_count = get_feature_count(str_xnsPath)
+#    
+#    # Striding...
+#    arr_strides = np.linspace(0, xn_count, xn_count/100)
+#    arr_strides = np.delete(arr_strides,0)  
     
-    # Striding...
-    arr_strides = np.linspace(0, xn_count, xn_count/100)
-    arr_strides = np.delete(arr_strides,0)  
+    # NOTE:  Use MultiProcessing here over arr_strides??
 
 #    progBar = self.progressBar
 #    progBar.setVisible(True)
@@ -1858,7 +1860,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
     # Now loop over the linknos to get access grid by window...
     with rasterio.open(str(str_dem_path)) as ds_dem:
         
-#        nodata_val = ds_dem.nodata # NODATA val must be defined for this to return anything
+        nodata_val = ds_dem.nodata # NODATA val must be defined for this to return anything
     
         # Transform to pixel space
         df_coords['col1'], df_coords['row1'] = ~ds_dem.transform * (df_coords['x1'], df_coords['y1'])
@@ -1877,10 +1879,10 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
 #            if linkno != 120:
 #                continue
             
-            row_min = df_linkno[['row1','row2']].min(axis=0).min()
-            row_max = df_linkno[['row1','row2']].max(axis=0).max()
-            col_min = df_linkno[['col1','col2']].min(axis=0).min()
-            col_max = df_linkno[['col1','col2']].max(axis=0).max()            
+            row_min = int(df_linkno[['row1','row2']].min(axis=0).min())
+            row_max = int(df_linkno[['row1','row2']].max(axis=0).max())
+            col_min = int(df_linkno[['col1','col2']].min(axis=0).min())
+            col_max = int(df_linkno[['col1','col2']].max(axis=0).max())            
             
             # Now get the DEM specified by this window as a numpy array...
             w = ds_dem.read(1, window=((row_min, row_max+1),(col_min, col_max+1))) 
@@ -1913,8 +1915,10 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
                 lst_xncol = np.linspace(tpl_xn.col1-col_min, tpl_xn.col2-col_min, xn_len)
                 
                 #xnptdist = xn_len/len(lst_xnrow) #this is always 1 cell or equivalent to cell_size in meters/feet?
-                            
-                arr_zi = w[lst_xnrow.astype(np.int), lst_xncol.astype(np.int)]   # nearest-neighbor                
+                try:            
+                    arr_zi = w[lst_xnrow.astype(np.int), lst_xncol.astype(np.int)]   # nearest-neighbor                
+                except:
+                    continue # Just skip this Xn altogether?  Could be smarter (eg, are the indices > len(w)?)
 #                lst_zi = ndimage.map_coordinates(w, np.vstack((lst_xnrow, lst_xncol)), order=1, mode='nearest') # use this for additonal interpolation options (ie, cubic, bilinear, etc)
                 
 #                plt.plot(np.arange(len(zi)), zi)   
@@ -1998,16 +2002,33 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
             # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
             if not(bool_isvalley):
                 i_order = df_linkno.order.iloc[0]
+                
+#                if i_order != 6: continue
+                
                 if i_order == 1:
                     p_xnlength=20
+                    p_fitlength = 3
                 elif i_order == 2:
                     p_xnlength=23
+                    p_fitlength = 6
                 elif i_order == 3:
                     p_xnlength=40
+                    p_fitlength = 9
                 elif i_order == 4:
-                    p_xnlength=50 
+                    p_xnlength=60 
+                    p_fitlength = 12
                 elif i_order == 5:
-                    p_xnlength=60                    
+                    p_xnlength=80  
+                    p_fitlength = 15
+                elif i_order >= 6:
+                    p_xnlength=250 
+                    p_fitlength = 20
+#                elif i_order == 7:
+#                    p_xnlength=130 
+#                    p_fitlength = 21
+#                elif i_order == 8:
+#                    p_xnlength=150  
+#                    p_fitlength = 24
     
             reach_len = len(df_linkno['x'])
         
@@ -2024,7 +2045,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                 if p_fitlength > i or i + p_fitlength >= reach_len: # if i + paramFitLength > reach_len
                     fitLength = p_xngap
                 else:
-                    fitLength = p_fitlength
+                    fitLength = p_fitlength                    
         
                 lstThisSegmentRows.append(df_linkno['y'].iloc[i+fitLength])
                 lstThisSegmentRows.append(df_linkno['y'].iloc[i-fitLength])
@@ -2134,15 +2155,25 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
            i_order = line['properties'][str_orderid]
 #           i_order=1
            
+#           if i_order != 6: continue # FOR TESTING
+           
            print('{} | {}'.format(i_linkno, j))
            
            line_shply = LineString(line['geometry']['coordinates'])
            
-           length = line_shply.length # units depend on crs
+           # Smoothing higher order reaches via Shapely...
+           if i_order == 3:
+               line_shply = line_shply.simplify(10.0, preserve_topology=False)
+           elif i_order == 4:
+               line_shply = line_shply.simplify(20.0, preserve_topology=False)
+           elif i_order == 5:
+               line_shply = line_shply.simplify(40.0, preserve_topology=False)
+           elif i_order >= 6:
+               line_shply = line_shply.simplify(50.0, preserve_topology=False)               
            
-           if length > 9:
-               
-#               int_pts = np.linspace(3, length, length/p_interp_spacing)
+           length = line_shply.length # units depend on crs
+                      
+           if length > 9:              
                
                int_pts = np.arange(0, length, p_interp_spacing) # p_interp_spacing in projection units?
 
