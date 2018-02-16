@@ -1570,6 +1570,7 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
 #            j+=1
             
             this_linkno = tpl_row.linkno
+            this_order = tpl_row.strmord
             
 #            print('this_linkno: {} | index: {}'.format(this_linkno, tpl_row.Index))
             
@@ -1579,16 +1580,22 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
             # A list to store the total number of indices/blocks in a Xn...
             lst_total_cnt = []
 
+            arr_elev = tpl_row.elev
+            arr_elev = arr_elev[arr_elev != np.float32(nodata_val)]
+                
             # Normalize elevation to zero...
-#            arr_elev = tpl_row.elev
-#            arr_elev = arr_elev[arr_elev != np.float32(nodata_val)]
-#            thisxn_norm = arr_elev - np.min(arr_elev)
-            
-            thisxn_norm = tpl_row.elev - np.min(tpl_row.elev)
+            if this_order < 5:
+                thisxn_norm = arr_elev - np.min(arr_elev)                
+                thisxn_norm = tpl_row.elev - np.min(tpl_row.elev)
+            else:
+                # for order>5...(THIS ASSUMES YOU'RE USING THE BREACHED DEM, may not be necessary otherwise)
+                thisxn_norm = tpl_row.elev - np.partition(tpl_row.elev, 2)[2]
+                # then any negatives make zero...
+                thisxn_norm[thisxn_norm<0]=0
 
-
+#            p_vert_zero=0.2
             # Loop from zero to max(this_xn_norm) using a pre-defined vertical step (0.2 m?)...
-            for this_slice in np.arange(0, np.max(thisxn_norm), param_ivert):
+            for this_slice in np.arange(0., np.max(thisxn_norm), param_ivert):
 
                 # The indices of positives...
                 gtzero_indices = np.nonzero((this_slice - thisxn_norm) > 0)[0] # Zero index get the first element of the returned tuple
@@ -1706,17 +1713,17 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
 #  Calculate channel metrics based on the bankpoint slope-threshold method at each Xn,
 #   writing the bank points to a shapefile 
 # ====================================================================================
-def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh, arr_strides): 
+def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh): 
        
     print('Channel metrics from bank points...')    
     
-#    # << BEGIN LOOP >>
-#    # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
-#    xn_count = get_feature_count(str_xnsPath)
-#    
-#    # Striding...
-#    arr_strides = np.linspace(0, xn_count, xn_count/100)
-#    arr_strides = np.delete(arr_strides,0)  
+    # << BEGIN LOOP >>
+    # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
+    xn_count = get_feature_count(str_xnsPath)
+    
+    # Striding...
+    arr_strides = np.linspace(0, xn_count, xn_count/100)
+    arr_strides = np.delete(arr_strides,0)  
     
     # NOTE:  Use MultiProcessing here over arr_strides??
 
@@ -1829,6 +1836,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
     lst_y1=[]
     lst_x2=[]
     lst_y2=[]
+    lst_strmord=[]
 
 #    start_time = timeit.default_timer()
     # First get all linknos...
@@ -1854,8 +1862,10 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
             lst_y1.append(line['geometry']['coordinates'][0][1])      
             lst_x2.append(line['geometry']['coordinates'][1][0])
             lst_y2.append(line['geometry']['coordinates'][1][1]) 
+            lst_strmord.append(line['properties']['strmord'])
             
-    df_coords = pd.DataFrame({'linkno':lst_linknos, 'x1':lst_x1, 'y1':lst_y1, 'x2':lst_x2, 'y2':lst_y2})
+            
+    df_coords = pd.DataFrame({'linkno':lst_linknos, 'x1':lst_x1, 'y1':lst_y1, 'x2':lst_x2, 'y2':lst_y2, 'strmord':lst_strmord})
          
     # Now loop over the linknos to get access grid by window...
     with rasterio.open(str(str_dem_path)) as ds_dem:
@@ -1882,7 +1892,8 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
             row_min = int(df_linkno[['row1','row2']].min(axis=0).min())
             row_max = int(df_linkno[['row1','row2']].max(axis=0).max())
             col_min = int(df_linkno[['col1','col2']].min(axis=0).min())
-            col_max = int(df_linkno[['col1','col2']].max(axis=0).max())            
+            col_max = int(df_linkno[['col1','col2']].max(axis=0).max())    
+            strmord = int(df_linkno.strmord.iloc[0])
             
             # Now get the DEM specified by this window as a numpy array...
             w = ds_dem.read(1, window=((row_min, row_max+1),(col_min, col_max+1))) 
@@ -1931,14 +1942,14 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
                     lst_xnrow[i] = lst_xnrow[i] + row_min
                     lst_xncol[i] = lst_xncol[i] + col_min
 
-                tpl_out = (linkno, arr_zi, lst_xnrow, lst_xncol)
+                tpl_out = (linkno, arr_zi, lst_xnrow, lst_xncol, strmord)
                 lst_all_zi.append(tpl_out)
 #                i += 1
            
 #    print('\tTotal Xn\'s:  {}'.format(i))    
 #    print('\tTime interpolating elevation along Xn\'s:  ' + str(timeit.default_timer() - start_time))
 
-    return pd.DataFrame(lst_all_zi, columns=['linkno','elev','xn_row','xn_col'])
+    return pd.DataFrame(lst_all_zi, columns=['linkno','elev','xn_row','xn_col','strmord'])
     
 # ===================================================================================
 #  Build the Xns for all reaches and write to shapefile
@@ -1976,7 +1987,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
            
     # Create the Xn shapefile for writing...
 #    test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int', 'endpt1_x':'float', 'endpt1_y':'float', 'endpt2_x':'float', 'endpt2_y':'float'}} 
-    test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int'}} 
+    test_schema = {'geometry': 'LineString', 'properties': {'linkno': 'int', 'strmord':'int'}} 
     
     print('Building and Writing Cross Section File...')
     with fiona.open(str_xns_path, 'w', driver='ESRI Shapefile', crs=streamlines_crs, schema=test_schema) as chan_xns:
@@ -1984,6 +1995,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
         for i_linkno, df_linkno in gp_coords:
             
             i_linkno = int(i_linkno)
+            i_order = int(df_linkno.order.iloc[0])
             
 #            if i_linkno != 177:
 #                continue
@@ -2001,7 +2013,6 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                 
             # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
             if not(bool_isvalley):
-                i_order = df_linkno.order.iloc[0]
                 
 #                if i_order != 6: continue
                 
@@ -2097,7 +2108,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
                 # the shapefile geometry use (lon,lat) Requires a list of x-y tuples
                 line = {'type': 'LineString', 'coordinates':lst_xy}
 #                prop = {'linkno': i_linkno, 'endpt1_x':lst_xy[0][0], 'endpt1_y':lst_xy[0][1], 'endpt2_x':lst_xy[1][0], 'endpt2_y':lst_xy[1][1]}
-                prop = {'linkno': i_linkno}
+                prop = {'linkno': i_linkno, 'strmord': i_order}
                 chan_xns.write({'geometry': line, 'properties':prop}) 
                 
 #                if XnCntr > 10:

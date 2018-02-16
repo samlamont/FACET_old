@@ -3,7 +3,7 @@
 Created on Tue Dec  6 16:11:00 2016
 
 @author: sam.lamont
-"""
+5"""
 #import time
 import glob
 import timeit
@@ -24,8 +24,8 @@ import fiona
 #import matplotlib.pyplot as plt
 import pandas as pd
 
-from functools import partial
-import multiprocessing
+#from functools import partial
+#import multiprocessing
 
 import funcs_v2 
 #from funcs_v2 import workerfuncs
@@ -486,12 +486,12 @@ if __name__ == '__main__':
 #        self.p_slpthresh.setText('0.03')    
     
     # << PARAMETERS >>
-    parm_ivert = 0.2
-    XnPtDist = 3
-    parm_ratiothresh = 1.5
-    parm_slpthresh = 0.03
+    parm_ivert = 0.2 # 0.2 default
+    XnPtDist = 3 # 3 is default
+    parm_ratiothresh = 1.5 # 1.5 default
+    parm_slpthresh = 0.03 # 0.03 default
     p_buffxnlen = 30 # meters (if UTM) ??
-    p_xngap = 3
+    p_xngap = 3 # 3 default
     
     # =========================================================================================
     #                                   Functions    
@@ -526,15 +526,15 @@ if __name__ == '__main__':
         cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 
         # << BUILD STREAMLINES COORDINATES >>
-#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
-#        df_coords.to_csv(str_csv_path)
-        df_coords = pd.read_csv(str_csv_path, )    
-        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
+        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+        df_coords.to_csv(str_csv_path)
+#        df_coords = pd.read_csv(str_csv_path, )    
+#        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
 
         # ============================= CROSS SECTION ANALYSES =====================================
         # << CREATE Xn SHAPEFILES >>
-        # Channel...
-#        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
+#         Channel...
+        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
 
         # << INTERPOLATE ELEVATION ALONG Xns >>
         df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
@@ -542,25 +542,24 @@ if __name__ == '__main__':
         # Calculate channel metrics and write bank point shapefile...
         
         # << BEGIN TEST MULTIPROCESSING >>
-        # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
-        xn_count = funcs_v2.get_feature_count(str_xns_path)
-        
-        # Striding...
-        arr_strides = np.linspace(0, xn_count, xn_count/100)
-        arr_strides = np.delete(arr_strides,0)   
-        
-        lst_arr_strides = np.array_split(arr_strides, 100)
-
-        func = partial(funcs_v2.chanmetrics_bankpts, df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-        
-        pool = multiprocessing.Pool(processes=10)
-        
-        lst_final = pool.map(func, lst_arr_strides)        
-        
+#        # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
+#        xn_count = funcs_v2.get_feature_count(str_xns_path)
+#        
+#        # Striding...
+#        arr_strides = np.linspace(0, xn_count, xn_count/100)
+#        arr_strides = np.delete(arr_strides,0)   
+#        
+#        lst_arr_strides = np.array_split(arr_strides, 10)
+#
+#        func = partial(funcs_v2.chanmetrics_bankpts, df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+#        
+#        pool = multiprocessing.Pool(processes=10)
+#        
+#        lst_final = pool.map(func, lst_arr_strides)                
         # << END TEST MULTIPROCESSING >>
         
         # NOTE:  Use raw DEM here??
-#        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
 
         print('Run time for this watershed:  {}'.format(timeit.default_timer() - start_time_i))
         
