@@ -3,11 +3,14 @@
 Created on Tue Dec  6 16:11:00 2016
 
 @author: sam.lamont
-5"""
+"""
+
+from PyQt5 import QtCore, QtGui, uic
+from PyQt5.QtWidgets import QMainWindow, QApplication
+
 #import time
 import glob
 import timeit
-from PyQt4 import QtCore, QtGui, uic
 #import sys
 import numpy as np
 #from numpy import array
@@ -64,7 +67,7 @@ import funcs_v2
 # ===================================================================================
 #                                       MAIN
 # ===================================================================================
-class facet(QtGui.QMainWindow):
+class facet(QMainWindow):
 #class facet(QtGui.QDialog):
 #class facet(QtGui.QTabWidget):
 #class MainForm(QtGui.QDialog, FORM_CLASS):
@@ -294,7 +297,7 @@ class facet(QtGui.QMainWindow):
             if self.tabWidget.currentIndex() == 1:
                 
                 # Check coordinate systems (DEM vs. Streamlines)...
-                if dict(self.dem_crs) <> dict(self.streamlines_crs):
+                if dict(self.dem_crs) != dict(self.streamlines_crs):
                     QtGui.QMessageBox.critical(self, 'Warning!', 'Coordinate Systems of DEM and Streams Layer May Not Match')                            
     
                 # Build reach coords and get crs from a pre-existing streamline shapefile...
@@ -524,31 +527,28 @@ if __name__ == '__main__':
         # Output layers...
         str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
         str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
-        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.shp'
+        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
         
         # << GET CELL SIZE >>
         cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 
         # << BUILD STREAMLINES COORDINATES >>
-        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
-        df_coords.to_csv(str_csv_path)
-#        df_coords = pd.read_csv(str_csv_path, )    
-#        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
+#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords.to_csv(str_csv_path)
+        df_coords = pd.read_csv(str_csv_path, )    
+        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
 
-        # ============================= CROSS SECTION ANALYSES =====================================
+        # ============================= << CROSS SECTION ANALYSES >> =====================================
         # << CREATE Xn SHAPEFILES >>
-#         Channel...
-        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
+#        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
 
         # << INTERPOLATE ELEVATION ALONG Xns >>
-        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+#        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
         
-        # Calculate channel metrics and write bank point shapefile...
+        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
+#        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
         
-        # NOTE:  Use raw DEM here??
-        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-        
-        # << BANK PIXELS FROM CURVATURE >>
+        # ========================== << BANK PIXELS FROM CURVATURE >> ====================================
         funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
 
         print('Run time for this watershed:  {}'.format(timeit.default_timer() - start_time_i))

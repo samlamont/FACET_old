@@ -27,11 +27,11 @@ from rasterio.warp import transform
 from rasterio.features import shapes
 import rasterio.features
 
-import matplotlib
+#import matplotlib
 #matplotlib.use('TkAgg')
 
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
+#import matplotlib.pyplot as plt
+#plt.style.use('ggplot')
 #from mpl_toolkits.mplot3d import Axes3D
 #from matplotlib import cm
 
@@ -42,7 +42,7 @@ import pandas as pd
 from shapely.geometry import shape, mapping, LineString, MultiLineString, Point, MultiPoint
 from shapely.ops import split
 #from jenks import jenks
-from PyQt4 import QtGui, QtCore
+#from PyQt4 import QtGui, QtCore
 
 #import scipy.io as sio
 
@@ -1144,12 +1144,20 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
             total_len = len(df_coords.index)
             
             out_meta = ds_dem.meta.copy()      
+            out_meta['dtype'] = 'int16' # no need for float32 for bankpixels to save size of output
             
             arr_bankpts=np.zeros([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
             
     #        progBar.setRange(0, len(df_coords.index)) 
             
             for tpl_row in df_coords.itertuples():
+                
+                if tpl_row.order != 5:
+                    continue
+                
+                if tpl_row.order >= 5:
+                    w_height=50 # number of rows
+                    w_width=50  # number of columns
                 
 #                if tpl_row.linkno <> 185:
 #                    continue
@@ -1209,22 +1217,15 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                             w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
                         except:
                             print('pause')
-                            
-    #                    plt.imshow(w_curve)
-    
-    #                    sys.exit()
-                        
-                        
+                                                
                         w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
-                        
                     # =======================================
                     
                     w_curve[w_curve<-99999999.] = 0.
                     w_curve[w_curve>99999999.] = 0.
 
                     arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
-                    
-            
+                              
             print('Writing bank pixels .tif...')
             with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
                 dest.write(arr_bankpts, indexes=1)
