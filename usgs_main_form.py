@@ -493,6 +493,8 @@ if __name__ == '__main__':
     p_buffxnlen = 30 # meters (if UTM) ??
     p_xngap = 3 # 3 default
     
+    use_wavelet_curvature_method = False
+    
     # =========================================================================================
     #                                   Functions    
     # =========================================================================================
@@ -513,14 +515,16 @@ if __name__ == '__main__':
     
         str_dem_path = glob.glob(path + '/*dem*.tif')[0]
         str_hand_path = glob.glob(path + '/*hand*.tif')[0]
-        str_net_path = glob.glob(path + '/*net*.shp')[0]  
+        str_net_path = glob.glob(path + '/*net*.shp')[0]     
         
         path_to_dem, dem_filename = os.path.split(str_dem_path)
         csv_filename = dem_filename[:-8] + '.csv'
         str_csv_path = path_to_dem + '\\' + csv_filename
         
+        # Output layers...
         str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
         str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
+        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.shp'
         
         # << GET CELL SIZE >>
         cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
@@ -541,25 +545,11 @@ if __name__ == '__main__':
         
         # Calculate channel metrics and write bank point shapefile...
         
-        # << BEGIN TEST MULTIPROCESSING >>
-#        # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
-#        xn_count = funcs_v2.get_feature_count(str_xns_path)
-#        
-#        # Striding...
-#        arr_strides = np.linspace(0, xn_count, xn_count/100)
-#        arr_strides = np.delete(arr_strides,0)   
-#        
-#        lst_arr_strides = np.array_split(arr_strides, 10)
-#
-#        func = partial(funcs_v2.chanmetrics_bankpts, df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-#        
-#        pool = multiprocessing.Pool(processes=10)
-#        
-#        lst_final = pool.map(func, lst_arr_strides)                
-        # << END TEST MULTIPROCESSING >>
-        
         # NOTE:  Use raw DEM here??
         funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+        
+        # << BANK PIXELS FROM CURVATURE >>
+        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
 
         print('Run time for this watershed:  {}'.format(timeit.default_timer() - start_time_i))
         
@@ -655,6 +645,23 @@ if __name__ == '__main__':
     
     print('\n<<< End >>>\r\n')
     print('Total Run Time:  {}'.format(timeit.default_timer() - start_time_0))
+    
+        # << BEGIN TEST MULTIPROCESSING >>  This did not help!
+#        # Do the rest by looping in strides, rather than all at once, to conserve memory...(possibly using multiprocessing)
+#        xn_count = funcs_v2.get_feature_count(str_xns_path)
+#        
+#        # Striding...
+#        arr_strides = np.linspace(0, xn_count, xn_count/100)
+#        arr_strides = np.delete(arr_strides,0)   
+#        
+#        lst_arr_strides = np.array_split(arr_strides, 10)
+#
+#        func = partial(funcs_v2.chanmetrics_bankpts, df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+#        
+#        pool = multiprocessing.Pool(processes=10)
+#        
+#        lst_final = pool.map(func, lst_arr_strides)                
+        # << END TEST MULTIPROCESSING >>    
 #     =====================================================================================
 
 #    # ===== Run GUI ==============================

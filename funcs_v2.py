@@ -770,7 +770,7 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
         out_meta = ds_hand.meta.copy()
         arr_out_pixels = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])                                  
         
-        # Access the bankpts layer...
+        # Access the bank pixel layer...
         with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
             
             # Access the streamlines layer...
@@ -1094,7 +1094,7 @@ def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
 # ===============================================================================
 #  Searchable window with center pixel defined by get_stream_coords_from_features
 # ===============================================================================  
-def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size):
+def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_method):
     
     print('Bank pixels from curvature windows...')
     
@@ -1172,16 +1172,17 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                 
                 if np.size(w) > 9: # make sure a window of appropriate size was returned from the DEM
                 
-                    # === Wavelet Curvature from Chandana ===
-                    gradfx1 = signal.convolve2d(w, g2x1, boundary='symm', mode='same') 
-                    gradfy1 = signal.convolve2d(w, g2y1, boundary='symm', mode='same')     
-                    
-                    w_curve=gradfx1+gradfy1
-                    
-#                    test = np.std(w_curve)
-
-                    # Pick out bankpts...                    
-                    w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
+                    if use_wavelet_method:
+                        # === Wavelet Curvature from Chandana ===
+                        gradfx1 = signal.convolve2d(w, g2x1, boundary='symm', mode='same') 
+                        gradfy1 = signal.convolve2d(w, g2y1, boundary='symm', mode='same')     
+                        
+                        w_curve=gradfx1+gradfy1
+                        
+    #                    test = np.std(w_curve)
+    
+                        # Pick out bankpts...                    
+                        w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
                     
 #                    plt.imshow(lum_img, cmap="hot") #, vmin=-2, vmax=2)   
 #                    plt.colorbar()    
@@ -1195,27 +1196,28 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
 #                    if j > 4:
 #                        sys.exit()
                     # =======================================
+                    
+                    else:
+                        # === Mean Curvature ====================                                
+                        Zy, Zx = np.gradient(w, cell_size)
+                        Zxy, Zxx = np.gradient(Zx, cell_size)
+                        Zyy, _ = np.gradient(Zy, cell_size)                                                
+                  
+                        try:
+                            # OR, mean curvature...
+                            w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
+                            w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
+                        except:
+                            print('pause')
+                            
+    #                    plt.imshow(w_curve)
     
-#                    # === Mean Curvature ====================                                
-#                    Zy, Zx = np.gradient(w, cell_size)
-#                    Zxy, Zxx = np.gradient(Zx, cell_size)
-#                    Zyy, _ = np.gradient(Zy, cell_size)                                                
-#              
-#                    try:
-#                        # OR, mean curvature...
-#                        w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
-#                        w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
-#                    except:
-#                        print('pause')
-#                        
-##                    plt.imshow(w_curve)
-#
-##                    sys.exit()
-#                    
-#                    
-#                    w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
-#                    
-#                    # =======================================
+    #                    sys.exit()
+                        
+                        
+                        w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
+                        
+                    # =======================================
                     
                     w_curve[w_curve<-99999999.] = 0.
                     w_curve[w_curve>99999999.] = 0.
@@ -1226,8 +1228,7 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
             print('Writing bank pixels .tif...')
             with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
                 dest.write(arr_bankpts, indexes=1)
-                
-                
+                               
     except Exception as e:
         print('\r\nError in bankpixels_from_curvature_window. Exception: {} \n'.format(e))        
             
