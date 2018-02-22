@@ -252,7 +252,7 @@ def clip_features(str_lines_path, output_filename, str_dem_path):
         {'properties': {'test': v}, 'geometry': s}
         for i, (s, v) 
         in enumerate(
-            shapes(arr_dem, mask=mask, transform=ds_dem.affine)))
+            shapes(arr_dem, mask=mask, transform=ds_dem.transform)))
     
     poly = next(results)   
     poly_shp = shape(poly['geometry'])    
@@ -336,7 +336,7 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
         lst_dangles = zip(tpl_pts[0], tpl_pts[1])
 
         for coords in lst_dangles:                        
-            col, row = ~ds_dem.affine * (coords[0], coords[1]) # BUT you have to convert coordinates from hires to dem  
+            col, row = ~ds_dem.transform * (coords[0], coords[1]) # BUT you have to convert coordinates from hires to dem  
             try:
                 arr_danglepts[int(row),int(col)] = 1.
             except:
@@ -571,38 +571,38 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
             
         if run_taudem:
 
-            # Testing...
-#            mpipath = 'r' +  '"' + mpipath + '"'
-#            fel = 'r' +  '"' + fel + '"'
-            
-            print('mpipath: ' + mpipath)            
-            print('fel: ' + fel_breach)
-            print(' ')
-#            sys.exit()
-            # End tesing
-            
-            
-    #        # ==============  << 3. D8 FDR with TauDEM >> ================        
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
-                  ' -sd8 ' + '"' + sd8 + '"'
-            print(cmd)
-            
-            # Submit command to operating system
-            print('Running TauDEM D8 Flow Direction...')
-            os.system(cmd)
-            
-            # Capture the contents of shell command and print it to the arcgis dialog box
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            
-            # Get some feedback from the process to print out...
-            message = "\n"
-            for line in process.stdout.readlines():
-                line = line.decode()
-    #            if isinstance(line, bytes):	   # true in Python 3
-    #                line = line.decode()
-                message = message + line        
-            print(message)    
-                
+#            # Testing...
+##            mpipath = 'r' +  '"' + mpipath + '"'
+##            fel = 'r' +  '"' + fel + '"'
+#            
+#            print('mpipath: ' + mpipath)            
+#            print('fel: ' + fel_breach)
+#            print(' ')
+##            sys.exit()
+#            # End tesing
+#            
+#            
+#    #        # ==============  << 3. D8 FDR with TauDEM >> ================        
+#            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
+#                  ' -sd8 ' + '"' + sd8 + '"'
+#            print(cmd)
+#            
+#            # Submit command to operating system
+#            print('Running TauDEM D8 Flow Direction...')
+#            os.system(cmd)
+#            
+#            # Capture the contents of shell command and print it to the arcgis dialog box
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+#            
+#            # Get some feedback from the process to print out...
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                line = line.decode()
+#    #            if isinstance(line, bytes):	   # true in Python 3
+#    #                line = line.decode()
+#                message = message + line        
+#            print(message)    
+#                
 #    #        # ============= << 4. D8 FAC with TauDEM >> ================        
 #    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
 #            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
@@ -685,30 +685,30 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #        #                line = line.decode()
 #                message = message + line        
 #            print(message)            
-#            
-#            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
-#            distmeth = 'v'
-#            statmeth = 'ave'
-#            
-#            # Use original DEM here...
-#            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
-#            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
-#                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
-#        
-#            # Submit command to operating system
-#            os.system(cmd)
-#            
-#            # Get some feedback from the process to print out...
-#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
-#            
-#            message = "\n"
-#            for line in process.stdout.readlines():
-#                line = line.decode()
-#        #            if isinstance(line, bytes):	   # true in Python 3
-#        #                line = line.decode()
-#                message = message + line
-#                
-#            print(message)
+            
+            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
+            distmeth = 'v'
+            statmeth = 'ave'
+            
+            # Use original DEM here...
+            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
+                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
+        
+            # Submit command to operating system
+            os.system(cmd)
+            
+            # Get some feedback from the process to print out...
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
+            
+            message = "\n"
+            for line in process.stdout.readlines():
+                line = line.decode()
+        #            if isinstance(line, bytes):	   # true in Python 3
+        #                line = line.decode()
+                message = message + line
+                
+            print(message)
 
     except:
         print("Unexpected error:", sys.exc_info()[0])
@@ -1090,7 +1090,151 @@ def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
 #    
                     
     return bank_height, chan_width, bank_ang
+
+# ===============================================================================
+#  Calculates channel width and sinuosity using parallel offset buffering
+# ===============================================================================    
+def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path, parm_ivert):
     
+    print('Channel width from bank pixels -- segmented reaches...')
+
+#    j=0   
+#    progBar = self.progressBar
+#    progBar.setVisible(True) 
+    
+    # Create the filename and path for the output file... # NOT OS INDEPENDENT??
+    head, tail = os.path.split(str_streamlines_path)    
+    str_outname = tail[:-4] + '_ch_width.shp'
+    str_outpath = head + '/' + str_outname 
+    
+    gp_coords = df_coords.groupby('linkno')
+    
+#    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
+    schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float', 'dist_sl':'float', 'dist':'float', 'sinuosity':'float'}}                                  
+        
+    # Access the bank pixel layer...
+    with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
+        
+        # Access the streamlines layer...
+        with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+       
+#            progBar.setRange(0, len(streamlines)) 
+            
+            # Get the crs...
+            streamlines_crs = streamlines.crs                
+            
+#                # For writing out the buffers...
+#                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test_ls.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
+                
+            # Open another file to write the width...
+            with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
+                
+                for i_linkno, df_linkno in gp_coords:
+                    
+#                    progBar.setValue(j)
+#                    j+=1                    
+            
+                    i_linkno = int(i_linkno)
+#                        max_indx = len(df_linkno.index) - 1
+                    
+#                            if i_linkno != 116:
+#                                continue
+                    
+                    print('linkno:  {}'.format(i_linkno))
+          
+                    # << Analysis by reach segments >>
+                    # Set up index array to split up df_linkno into segments (these dictate the reach segment length)...
+                    # NOTE:  Reach might not be long enough to break up
+                    i_step=30 # is this same as fit_length defined above??
+                    arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
+                    lst_dfsegs = np.split(df_linkno, arr_ind)                        
+                    
+                    for i_seg, df_seg in enumerate(lst_dfsegs): # looping over each reach segment
+                        
+                        arr_x = df_seg.x.values
+                        arr_y = df_seg.y.values
+
+                        try:
+                            # Calculate straight line distance...
+                            dist_sl = np.sqrt((arr_x[0] - arr_x[-1])**2 + (arr_y[0] - arr_y[-1])**2)                     
+                        except:
+                            print('Error calculated straight line distance')
+                            dist_sl = 0.
+                        
+                        try:
+                            # Create a line segment from endpts in df_seg...
+                            ls = LineString(zip(arr_x, arr_y))
+                            
+                            dist = ls.length                                    
+                            sinuosity = dist/dist_sl # ratio of sinuous length to straight line length
+                            
+                            lst_tally=[]                            
+
+                            # Successive buffer-mask operations to count bank pixels at certain intervals
+                            lst_buff=range(cell_size,30,cell_size)
+
+                            for buff_dist in lst_buff:                                                            
+                                
+                                try:
+                                    # Watch out for potential geometry errors here...
+                                    ls_offset_left = ls.parallel_offset(buff_dist, 'left')
+                                    ls_offset_rt = ls.parallel_offset(buff_dist, 'right')   
+                                except:
+                                    print('Error performing offset buffer')
+                                
+                                # Buffer errors can result from complicated line geometry... 
+                                try:
+                                    out_left, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)  
+                                except:
+                                    print('Left offset error')
+                                    out_left=np.array([0])
+                                    
+                                try:
+                                    out_rt, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
+                                except:
+                                    print('Right offset error')
+                                    out_rt=np.array([0])
+                                    
+                                num_pixels_left = len(out_left[out_left>0.])
+                                num_pixels_rt = len(out_rt[out_rt>0.])
+                                
+                                # You want the number of pixels gained by each interval...                    
+                                tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
+                                lst_tally.append(tpl_out)                    
+                                df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
+
+                        except:
+                            print('buffer exception pause')
+                            # There may be errors associated with the buffer geometry.  Just skip it if so?
+                            continue
+                   
+                        # Avoid division by zero                     
+#                        if df_tally.interval.sum() == 0:
+#                            continue                    
+                        
+                        # Calculate weighted average                     
+                        # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
+                        try:                        
+                            weighted_avg_left=0 
+                            weighted_avg_rt=0
+                            n_top=2
+                            for tpl in df_tally.nlargest(n_top, 'interval_left').iloc[0:2].itertuples():
+                                weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))
+
+                            for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
+                                weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))
+                                                                                                            
+                        except Exception as e:
+                            weighted_avg_left=-9999.
+                            weighted_avg_rt=-9999.
+                            print('Error calculating weighted average of buffer distance.  Maybe no bank pixels found? Exception: {} \n'.format(e))
+#                                continue
+                       
+                        # Write to the output shapefile here...
+                        output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity}, 'geometry':mapping(ls)})                            
+                                                       
+    return
+
 # ===============================================================================
 #  Searchable window with center pixel defined by get_stream_coords_from_features
 # ===============================================================================  
@@ -1144,7 +1288,8 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
             total_len = len(df_coords.index)
             
             out_meta = ds_dem.meta.copy()      
-            out_meta['dtype'] = 'int16' # no need for float32 for bankpixels to save size of output
+            out_meta['dtype'] = rasterio.uint8 # no need for float32 for bankpixels to save size of output
+            out_meta['compress'] = 'lzw'
             
             arr_bankpts=np.zeros([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])         
             
@@ -1152,13 +1297,16 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
             
             for tpl_row in df_coords.itertuples():
                 
-                if tpl_row.order != 5:
+                if tpl_row.order != 6:
                     continue
-                
-                if tpl_row.order >= 5:
-                    w_height=50 # number of rows
-                    w_width=50  # number of columns
-                
+#                
+                if tpl_row.order == 5:
+                    w_height=30 # number of rows
+                    w_width=30  # number of columns
+                if tpl_row.order >= 6:
+                    w_height=70
+                    w_width=70
+                    
 #                if tpl_row.linkno <> 185:
 #                    continue
                 
@@ -1223,12 +1371,17 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                     
                     w_curve[w_curve<-99999999.] = 0.
                     w_curve[w_curve>99999999.] = 0.
+                    
+                    w_curve[w_curve>0.] = 1.
 
                     arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
                               
+                    out_meta['nodata'] = 0.
+                    
             print('Writing bank pixels .tif...')
             with rasterio.open(str_bankpixels_path, "w", **out_meta) as dest:
-                dest.write(arr_bankpts, indexes=1)
+                dest.write(arr_bankpts.astype(rasterio.uint8), indexes=1)
+#                dest.write(arr_bankpts, indexes=1)
                                
     except Exception as e:
         print('\r\nError in bankpixels_from_curvature_window. Exception: {} \n'.format(e))        
@@ -2164,30 +2317,26 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
            j+=1
 #               self.emit(QtCore.SIGNAL("update(int)"), int(100*len(streamlines)/j)) 
            
-           i_linkno = line['properties'][str_reachid]           
-           i_order = line['properties'][str_orderid]
-#           i_order=1
-           
-#           if i_order != 6: continue # FOR TESTING
-           
-           print('{} | {}'.format(i_linkno, j))
-           
+#           print('{} | {}'.format(i_linkno, j))
            line_shply = LineString(line['geometry']['coordinates'])
-           
-           # Smoothing higher order reaches via Shapely...
-           if i_order == 3:
-               line_shply = line_shply.simplify(10.0, preserve_topology=False)
-           elif i_order == 4:
-               line_shply = line_shply.simplify(20.0, preserve_topology=False)
-           elif i_order == 5:
-               line_shply = line_shply.simplify(40.0, preserve_topology=False)
-           elif i_order >= 6:
-               line_shply = line_shply.simplify(50.0, preserve_topology=False)               
-           
+          
            length = line_shply.length # units depend on crs
                       
-           if length > 9:              
+           if length > 9:       
                
+               i_linkno = line['properties'][str_reachid]           
+               i_order = line['properties'][str_orderid]
+              
+               # Smoothing higher order reaches via Shapely...
+               if i_order == 3:
+                   line_shply = line_shply.simplify(10.0, preserve_topology=False)
+               elif i_order == 4:
+                   line_shply = line_shply.simplify(20.0, preserve_topology=False)
+               elif i_order == 5:
+                   line_shply = line_shply.simplify(40.0, preserve_topology=False)
+               elif i_order >= 6:
+                   line_shply = line_shply.simplify(50.0, preserve_topology=False)                
+       
                int_pts = np.arange(0, length, p_interp_spacing) # p_interp_spacing in projection units?
 
                for i in int_pts: # lambda here instead?
