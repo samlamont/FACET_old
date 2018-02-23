@@ -637,34 +637,34 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #                message = message + line
 #            print(message)            
 #            
-#            # ============= << 4.b StreamReachandWatershed with TauDEM >> ================      
-#            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + streamnet + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
-#                  ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
-#                  '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
-#                  '"'        
-#            # Submit command to operating system
-#            print('Running TauDEM Stream Reach and Watershed...')
-#            os.system(cmd)
-#            
-#            # Capture the contents of shell command and print it to the arcgis dialog box
-#            process=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-#            
-#            message = "\n"
-#            for line in process.stdout.readlines():
-#                if isinstance(line, bytes):	    # true in Python 3
-#                    line = line.decode()
-#                message = message + line        
-#            print(message) 
-#            
-#            # Let's get rid of some output that we are not currently using...
-#            try:
-#    #            os.remove(w)
-#                os.remove(coord)
-#                os.remove(tree)
-#                os.remove(ord_g)
-#            except:
-#                print('Warning: Problem removing files!')
-#                pass
+            # ============= << 4.b StreamReachandWatershed with TauDEM >> ================      
+            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + streamnet + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
+                  ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
+                  '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
+                  '"'        
+            # Submit command to operating system
+            print('Running TauDEM Stream Reach and Watershed...')
+            os.system(cmd)
+            
+            # Capture the contents of shell command and print it to the arcgis dialog box
+            process=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            
+            message = "\n"
+            for line in process.stdout.readlines():
+                if isinstance(line, bytes):	    # true in Python 3
+                    line = line.decode()
+                message = message + line        
+            print(message) 
+            
+            # Let's get rid of some output that we are not currently using...
+            try:
+    #            os.remove(w)
+                os.remove(coord)
+                os.remove(tree)
+                os.remove(ord_g)
+            except:
+                print('Warning: Problem removing files!')
+                pass
 #                
 #            # ============= << 5. Dinf with TauDEM >> =============                
 #            print('Running TauDEM Dinfinity...')        
@@ -686,29 +686,29 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #                message = message + line        
 #            print(message)            
             
-            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
-            distmeth = 'v'
-            statmeth = 'ave'
-            
-            # Use original DEM here...
-            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
-                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
-        
-            # Submit command to operating system
-            os.system(cmd)
-            
-            # Get some feedback from the process to print out...
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
-            
-            message = "\n"
-            for line in process.stdout.readlines():
-                line = line.decode()
-        #            if isinstance(line, bytes):	   # true in Python 3
-        #                line = line.decode()
-                message = message + line
-                
-            print(message)
+#            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
+#            distmeth = 'v'
+#            statmeth = 'ave'
+#            
+#            # Use original DEM here...
+#            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
+#            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
+#                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
+#        
+#            # Submit command to operating system
+#            os.system(cmd)
+#            
+#            # Get some feedback from the process to print out...
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
+#            
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                line = line.decode()
+#        #            if isinstance(line, bytes):	   # true in Python 3
+#        #                line = line.decode()
+#                message = message + line
+#                
+#            print(message)
 
     except:
         print("Unexpected error:", sys.exc_info()[0])
@@ -1094,7 +1094,7 @@ def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
 # ===============================================================================
 #  Calculates channel width and sinuosity using parallel offset buffering
 # ===============================================================================    
-def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path, parm_ivert):
+def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size):
     
     print('Channel width from bank pixels -- segmented reaches...')
 
@@ -1116,8 +1116,8 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
     with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
         
         # Access the streamlines layer...
-        with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
-       
+        with fiona.open(str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+      
 #            progBar.setRange(0, len(streamlines)) 
             
             # Get the crs...
@@ -1137,8 +1137,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                     i_linkno = int(i_linkno)
 #                        max_indx = len(df_linkno.index) - 1
                     
-#                            if i_linkno != 116:
-#                                continue
+#                    if i_linkno != 1368: continue                
                     
                     print('linkno:  {}'.format(i_linkno))
           
@@ -1297,8 +1296,8 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
             
             for tpl_row in df_coords.itertuples():
                 
-                if tpl_row.order != 6:
-                    continue
+#                if tpl_row.order != 6:
+#                    continue
 #                
                 if tpl_row.order == 5:
                     w_height=30 # number of rows
@@ -1306,9 +1305,8 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                 if tpl_row.order >= 6:
                     w_height=70
                     w_width=70
-                    
-#                if tpl_row.linkno <> 185:
-#                    continue
+
+#                if tpl_row.linkno != 1368: continue
                 
     #            progBar.setValue(j)
                 j+=1
@@ -1325,6 +1323,7 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                                 
                 # Then extract the internal part of the window that contains the rotated window??
                 w[w>9999999.0] = 0.0 # NoData values may have been corrupted by preprocessing?
+                w[w<-9999999.0] = 0.0
                 
                 if np.size(w) > 9: # make sure a window of appropriate size was returned from the DEM
                 
@@ -1360,22 +1359,23 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                         Zyy, _ = np.gradient(Zy, cell_size)                                                
                   
                         try:
-                            # OR, mean curvature...
                             w_curve = (Zx**2 + 1)*Zyy - 2*Zx*Zy*Zxy + (Zy**2 + 1)*Zxx
                             w_curve = -w_curve/(2*(Zx**2 + Zy**2 + 1)**(1.5))
                         except:
-                            print('pause')
+                            print('Error calculating Curvature in window...skipping')
+                            continue
                                                 
                         w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
-                    # =======================================
+                        # =======================================
                     
                     w_curve[w_curve<-99999999.] = 0.
                     w_curve[w_curve>99999999.] = 0.
                     
                     w_curve[w_curve>0.] = 1.
 
+                    # Note:  This assumes that the w_curve window is the specified size, which is not always the case for edge reaches...
                     arr_bankpts[row_min+buff:row_max-buff, col_min+buff:col_max-buff] = w_curve[buff:w_height-buff, buff:w_width-buff]
-                              
+                             
                     out_meta['nodata'] = 0.
                     
             print('Writing bank pixels .tif...')
@@ -2326,6 +2326,8 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
                
                i_linkno = line['properties'][str_reachid]           
                i_order = line['properties'][str_orderid]
+               
+#               if i_linkno != 1368: continue
               
                # Smoothing higher order reaches via Shapely...
                if i_order == 3:
@@ -2333,9 +2335,9 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
                elif i_order == 4:
                    line_shply = line_shply.simplify(20.0, preserve_topology=False)
                elif i_order == 5:
-                   line_shply = line_shply.simplify(40.0, preserve_topology=False)
+                   line_shply = line_shply.simplify(30.0, preserve_topology=False)
                elif i_order >= 6:
-                   line_shply = line_shply.simplify(50.0, preserve_topology=False)                
+                   line_shply = line_shply.simplify(40.0, preserve_topology=True)                
        
                int_pts = np.arange(0, length, p_interp_spacing) # p_interp_spacing in projection units?
 

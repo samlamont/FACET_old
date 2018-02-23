@@ -498,6 +498,12 @@ if __name__ == '__main__':
     
     use_wavelet_curvature_method = False
     
+    # By stream order:
+    # - Line smoothing parameters
+    # - Curvature window size
+    # - Xn length
+    # - Above Xn parameters
+    
     # =========================================================================================
     #                                   Functions    
     # =========================================================================================
@@ -512,7 +518,7 @@ if __name__ == '__main__':
     
     for i, path in enumerate(lst_paths):
         
-        if i != 4: continue
+        if i != 3: continue
         print('Processing:  ' + path)
         
         start_time_i = timeit.default_timer()
@@ -539,20 +545,20 @@ if __name__ == '__main__':
 #        df_coords = pd.read_csv(str_csv_path, )    
 #        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
 
-        # ============================= << CROSS SECTION ANALYSES >> =====================================
-        # << CREATE Xn SHAPEFILES >>
-        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
-
-        # << INTERPOLATE ELEVATION ALONG Xns >>
-        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
-        
-        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
-        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-        
-        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
-#        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
+#        # ============================= << CROSS SECTION ANALYSES >> =====================================
+#        # << CREATE Xn SHAPEFILES >>
+#        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
 #
-#        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
+#        # << INTERPOLATE ELEVATION ALONG Xns >>
+#        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+#        
+#        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
+#        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+#        
+#        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
+        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
+
+        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
 
         print('\nRun time for {}:  {}\r\n'.format(path, timeit.default_timer() - start_time_i))
         
