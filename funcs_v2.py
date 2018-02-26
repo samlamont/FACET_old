@@ -1094,13 +1094,16 @@ def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
 # ===============================================================================
 #  Calculates channel width and sinuosity using parallel offset buffering
 # ===============================================================================    
-def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size):
+def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff):
     
     print('Channel width from bank pixels -- segmented reaches...')
 
-#    j=0   
+    j=0   
 #    progBar = self.progressBar
 #    progBar.setVisible(True) 
+
+    # Successive buffer-mask operations to count bank pixels at certain intervals
+    lst_buff=range(cell_size,max_buff,cell_size)    
     
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
     head, tail = os.path.split(str_streamlines_path)    
@@ -1132,7 +1135,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                 for i_linkno, df_linkno in gp_coords:
                     
 #                    progBar.setValue(j)
-#                    j+=1                    
+                    j+=1                    
             
                     i_linkno = int(i_linkno)
 #                        max_indx = len(df_linkno.index) - 1
@@ -1144,7 +1147,6 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                     # << Analysis by reach segments >>
                     # Set up index array to split up df_linkno into segments (these dictate the reach segment length)...
                     # NOTE:  Reach might not be long enough to break up
-                    i_step=30 # is this same as fit_length defined above??
                     arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
                     lst_dfsegs = np.split(df_linkno, arr_ind)                        
                     
@@ -1154,84 +1156,80 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                         arr_y = df_seg.y.values
 
                         try:
+                            # Create a line segment from endpts in df_seg...
+                            ls = LineString(zip(arr_x, arr_y))                            
+                        except:
+                            print('Cannot create a LineString using these points, skipping')
+                            continue 
+                        
+                        try:
                             # Calculate straight line distance...
                             dist_sl = np.sqrt((arr_x[0] - arr_x[-1])**2 + (arr_y[0] - arr_y[-1])**2)                     
                         except:
                             print('Error calculated straight line distance')
-                            dist_sl = 0.
+                            dist_sl = -9999.
+                            
+                        dist = ls.length                                    
+                        sinuosity = dist/dist_sl # ratio of sinuous length to straight line length
                         
-                        try:
-                            # Create a line segment from endpts in df_seg...
-                            ls = LineString(zip(arr_x, arr_y))
+                        lst_tally=[]                            
+
+                        for buff_dist in lst_buff:                                                            
                             
-                            dist = ls.length                                    
-                            sinuosity = dist/dist_sl # ratio of sinuous length to straight line length
+                            try:
+                                # Watch out for potential geometry errors here...
+                                ls_offset_left = ls.parallel_offset(buff_dist, 'left')
+                                ls_offset_rt = ls.parallel_offset(buff_dist, 'right')   
+                            except:
+                                print('Error performing offset buffer')
                             
-                            lst_tally=[]                            
-
-                            # Successive buffer-mask operations to count bank pixels at certain intervals
-                            lst_buff=range(cell_size,30,cell_size)
-
-                            for buff_dist in lst_buff:                                                            
+                            # Buffer errors can result from complicated line geometry... 
+                            try:
+                                out_left, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)  
+                            except:
+                                print('Left offset error')
+                                out_left=np.array([0])
                                 
-                                try:
-                                    # Watch out for potential geometry errors here...
-                                    ls_offset_left = ls.parallel_offset(buff_dist, 'left')
-                                    ls_offset_rt = ls.parallel_offset(buff_dist, 'right')   
-                                except:
-                                    print('Error performing offset buffer')
+                            try:
+                                out_rt, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
+                            except:
+                                print('Right offset error')
+                                out_rt=np.array([0])
                                 
-                                # Buffer errors can result from complicated line geometry... 
-                                try:
-                                    out_left, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_left)], crop=True)  
-                                except:
-                                    print('Left offset error')
-                                    out_left=np.array([0])
-                                    
-                                try:
-                                    out_rt, out_transform = rasterio.mask.mask(ds_bankpixels, [mapping(ls_offset_rt)], crop=True)
-                                except:
-                                    print('Right offset error')
-                                    out_rt=np.array([0])
-                                    
-                                num_pixels_left = len(out_left[out_left>0.])
-                                num_pixels_rt = len(out_rt[out_rt>0.])
-                                
-                                # You want the number of pixels gained by each interval...                    
-                                tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
-                                lst_tally.append(tpl_out)                    
-                                df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
+                            num_pixels_left = len(out_left[out_left>0.])
+                            num_pixels_rt = len(out_rt[out_rt>0.])
+                            
+                            # You want the number of pixels gained by each interval...                    
+                            tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
+                            lst_tally.append(tpl_out)                    
+                            df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
 
-                        except:
-                            print('buffer exception pause')
-                            # There may be errors associated with the buffer geometry.  Just skip it if so?
-                            continue
-                   
-                        # Avoid division by zero                     
-#                        if df_tally.interval.sum() == 0:
-#                            continue                    
+
                         
                         # Calculate weighted average                     
                         # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
+                        weighted_avg_left=0 
+                        weighted_avg_rt=0
+                        n_top=2   
+                        
                         try:                        
-                            weighted_avg_left=0 
-                            weighted_avg_rt=0
-                            n_top=2
                             for tpl in df_tally.nlargest(n_top, 'interval_left').iloc[0:2].itertuples():
-                                weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))
-
-                            for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
-                                weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))
-                                                                                                            
+                                weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))                        
                         except Exception as e:
-                            weighted_avg_left=-9999.
-                            weighted_avg_rt=-9999.
-                            print('Error calculating weighted average of buffer distance.  Maybe no bank pixels found? Exception: {} \n'.format(e))
-#                                continue
+                            weighted_avg_left=max_buff
+                            print('Left width set to max. Exception: {} \n'.format(e))
+
+                        try:
+                            for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
+                                weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))                                                                                                            
+                        except Exception as e:
+                            weighted_avg_rt=max_buff
+                            print('Right width set to max. Exception: {} \n'.format(e))
                        
                         # Write to the output shapefile here...
                         output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity}, 'geometry':mapping(ls)})                            
-                                                       
+                                    
+                    if j > 50: break
     return
 
 # ===============================================================================
@@ -1332,9 +1330,7 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
                         gradfx1 = signal.convolve2d(w, g2x1, boundary='symm', mode='same') 
                         gradfy1 = signal.convolve2d(w, g2y1, boundary='symm', mode='same')     
                         
-                        w_curve=gradfx1+gradfy1
-                        
-    #                    test = np.std(w_curve)
+                        w_curve=gradfx1+gradfy1                    
     
                         # Pick out bankpts...                    
                         w_curve[w_curve<np.max(w_curve)*curve_thresh] = 0.
@@ -1725,7 +1721,7 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
 #            j+=1
             
             this_linkno = tpl_row.linkno
-            this_order = tpl_row.strmord
+#            this_order = tpl_row.strmord
             
 #            print('this_linkno: {} | index: {}'.format(this_linkno, tpl_row.Index))
             
@@ -1739,14 +1735,17 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
             arr_elev = arr_elev[arr_elev != np.float32(nodata_val)]
                 
             # Normalize elevation to zero...
-            if this_order < 5:
-                thisxn_norm = arr_elev - np.min(arr_elev)                
-                thisxn_norm = tpl_row.elev - np.min(tpl_row.elev)
-            else:
-                # for order>5...(THIS ASSUMES YOU'RE USING THE BREACHED DEM, may not be necessary otherwise)
-                thisxn_norm = tpl_row.elev - np.partition(tpl_row.elev, 2)[2]
-                # then any negatives make zero...
-                thisxn_norm[thisxn_norm<0]=0
+            thisxn_norm = arr_elev - np.min(arr_elev)                
+            thisxn_norm = tpl_row.elev - np.min(tpl_row.elev)    
+            # Below is if you're using the breached DEM...
+#            if this_order < 5:
+#                thisxn_norm = arr_elev - np.min(arr_elev)                
+#                thisxn_norm = tpl_row.elev - np.min(tpl_row.elev)
+#            else:
+#                # for order>5...(THIS ASSUMES YOU'RE USING THE BREACHED DEM, may not be necessary otherwise)
+#                thisxn_norm = tpl_row.elev - np.partition(tpl_row.elev, 2)[2]
+#                # then any negatives make zero...
+#                thisxn_norm[thisxn_norm<0]=0
 
 #            p_vert_zero=0.2
             # Loop from zero to max(this_xn_norm) using a pre-defined vertical step (0.2 m?)...
@@ -1841,7 +1840,6 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
                         except:
                             total_arearatio = -9999.0
 
-
                     tpl_metrics = tpl_bankfullpts + (lst_total_cnt,) + (this_linkno,) + (tpl_bankfullpts[3] + np.min(tpl_row.elev),) + tpl_bankangles + (bf_area,) + (ch_width,) + (overbank_ratio,) + (total_arearatio,)
 
 ##                    # Output metrics tuple...       local ID      bank angles        bank height                        bank elevation                    xn area
@@ -1860,7 +1858,7 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
     
     except Exception as e:
         print('\r\nError in analyze_xn_elev. Exception: {} \n'.format(e))
-        sys.exit()
+        pass
 
     return lst_bfmetrics    
     
@@ -2091,6 +2089,8 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
                 
                 # Remove possible no data values...NOTE:  They may not be defined in the original file
                 arr_zi = arr_zi[arr_zi != np.float32(nodata_val)]
+                
+                if arr_zi.size < 5: continue # if it only has less than 5 elevation measurements along this Xn, skip it
                                 
                 # Convert these from window row/col to raster row/col for bankpt use...
                 for i, xnrow in enumerate(lst_xnrow):
@@ -2330,14 +2330,14 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
 #               if i_linkno != 1368: continue
               
                # Smoothing higher order reaches via Shapely...
-               if i_order == 3:
-                   line_shply = line_shply.simplify(10.0, preserve_topology=False)
+               if i_order <= 3:
+                   line_shply = line_shply.simplify(5.0, preserve_topology=False)
                elif i_order == 4:
-                   line_shply = line_shply.simplify(20.0, preserve_topology=False)
+                   line_shply = line_shply.simplify(10.0, preserve_topology=False)
                elif i_order == 5:
-                   line_shply = line_shply.simplify(30.0, preserve_topology=False)
+                   line_shply = line_shply.simplify(20.0, preserve_topology=False)
                elif i_order >= 6:
-                   line_shply = line_shply.simplify(40.0, preserve_topology=True)                
+                   line_shply = line_shply.simplify(30.0, preserve_topology=False)                
        
                int_pts = np.arange(0, length, p_interp_spacing) # p_interp_spacing in projection units?
 

@@ -415,7 +415,7 @@ if __name__ == '__main__':
 #    str_dem_path = r"C:\Terrain_and_Bathymetry\OWP\hand_experiments\bwt\bwt_topobathy_huc6.dep"    
 #    str_dem_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003.dep'
 #    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020700081004_DifficultRun\facet\dr_utm18.tif"
-#    str_dem_path = r"B:\Terrain\DelawareRiverBasin\DEMs_3m\02040105_crash\bottom\02040105_bottom.tif"
+    str_dem_path = r"B:\Terrain\DelawareRiverBasin\DEMs_3m\02040102\02040102.tif"
     
     ## << VECTOR STREAMLINES (net) >>  
 #    str_net_in_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\nhdhires_chillisquaque.shp'
@@ -432,7 +432,7 @@ if __name__ == '__main__':
 #    str_net_in_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020700081004_DifficultRun\facet\dr_nhdhires_utm18.shp"
 #    str_net_in_path = r"C:\Terrain_and_Bathymetry\OWP\hand_experiments\guadalupe\bwtombigbee_nwm_route_link.shp"
 #    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040105_crash\nhdhires_02040104.shp'
-#    str_net_in_path = r"B:\Terrain\DelawareRiverBasin\DEMs_3m\02040105_crash\bottom\02040105_nhdhires_utm18.shp"
+    str_net_in_path = r"B:\Terrain\DelawareRiverBasin\DEMs_3m\02040105_crash\bottom\02040105_nhdhires_utm18.shp"
       
     ## << BANK PIXELS >>   
 #    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
@@ -496,55 +496,53 @@ if __name__ == '__main__':
     p_buffxnlen = 30 # meters (if UTM) ??
     p_xngap = 3 # 3 default
     
+    # Width from curvature via buffering...
     use_wavelet_curvature_method = False
+    i_step = 100 # length of reach segments for measuring width from bank pixels (and others?)
+    max_buff = 30 # maximum buffer length for measuring width based on pixels
     
     # By stream order:
     # - Line smoothing parameters
     # - Curvature window size
     # - Xn length
-    # - Above Xn parameters
-    
-    # =========================================================================================
-    #                                   Functions    
-    # =========================================================================================
-    
+    # - Above Xn parameters    
     
     #=============================================================================================== 
     #                             BEGIN BULK PROCESSING LOOP
     #===============================================================================================    
     
-    ## << FOR BULK PROCESSING >>
-    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
-    
-    for i, path in enumerate(lst_paths):
-        
-        if i != 3: continue
-        print('Processing:  ' + path)
-        
-        start_time_i = timeit.default_timer()
-    
-        str_dem_path = glob.glob(path + '/*dem*.tif')[0]
-        str_hand_path = glob.glob(path + '/*hand*.tif')[0]
-        str_net_path = glob.glob(path + '/*net*.shp')[0]     
-        
-        path_to_dem, dem_filename = os.path.split(str_dem_path)
-        csv_filename = dem_filename[:-8] + '.csv'
-        str_csv_path = path_to_dem + '\\' + csv_filename
-        
-        # Output layers...
-        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
-        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
-        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
-        
-        # << GET CELL SIZE >>
-        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
-
-        # << BUILD STREAMLINES COORDINATES >>
-        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
-        df_coords.to_csv(str_csv_path)
-#        df_coords = pd.read_csv(str_csv_path, )    
-#        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
-
+#    ## << FOR BULK PROCESSING >>
+#    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
+#    
+#    for i, path in enumerate(lst_paths):
+#        
+#        if i != 12: continue
+#        print('Processing:  ' + path)
+#        
+#        start_time_i = timeit.default_timer()
+#    
+#        str_dem_path = glob.glob(path + '/*dem*.tif')[0]
+#        str_hand_path = glob.glob(path + '/*hand*.tif')[0]
+#        str_net_path = glob.glob(path + '/*net*.shp')[0]     
+#        
+#        path_to_dem, dem_filename = os.path.split(str_dem_path)
+#        csv_filename = dem_filename[:-8] + '.csv'
+#        str_csv_path = path_to_dem + '\\' + csv_filename
+#        
+#        # Output layers...
+#        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
+#        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
+#        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
+#        
+#        # << GET CELL SIZE >>
+#        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
+#
+#        # << BUILD STREAMLINES COORDINATES >>
+#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords.to_csv(str_csv_path)
+##        df_coords = pd.read_csv(str_csv_path, )    
+##        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N        
+#
 #        # ============================= << CROSS SECTION ANALYSES >> =====================================
 #        # << CREATE Xn SHAPEFILES >>
 #        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
@@ -556,11 +554,11 @@ if __name__ == '__main__':
 #        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
 #        
 #        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
-        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
-
-        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size)
-
-        print('\nRun time for {}:  {}\r\n'.format(path, timeit.default_timer() - start_time_i))
+#        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
+#
+#        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)
+#
+#        print('\nRun time for {}:  {}\r\n'.format(path, timeit.default_timer() - start_time_i))
         
 #        break
         # ==================== CHANNEL WIDTH, FLOODPLAIN WIDTH, HAND ANALYSIS ALL IN ONE ===========
@@ -641,16 +639,16 @@ if __name__ == '__main__':
 #    funcs_v2.clip_features(str_net_in_path, str_output_nhdhires_path, str_dem_path)     
     
 ##    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
-#    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
-#    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
-#    str_whitebox_path= r"C:\gospatial\go-spatial_win_amd64.exe" # Go version
+    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
+    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
+    str_whitebox_path= r"C:\gospatial\go-spatial_win_amd64.exe" # Go version
 ##    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
 #    
-#    run_whitebox = False
-#    run_wg = False
-#    run_taudem = True
+    run_whitebox = False
+    run_wg = False
+    run_taudem = True
 ##    
-#    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
+    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
 #    
     print('\n<<< End >>>\r\n')
     print('Total Run Time:  {}'.format(timeit.default_timer() - start_time_0))
