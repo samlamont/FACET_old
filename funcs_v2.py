@@ -1074,72 +1074,97 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
 # ===============================================================================
 #  Reach characteristics from HAND
 # =============================================================================== 
-def reach_characteristics_hand(str_sheds_path, str_hand_path):
+def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
     '''
     Calculate the reach geometry metrics necessary for synthetic
     rating curve derivation from HAND grids.
     
     Returns: TO DO
-    '''
-    i_interval=0.2 # vertical step height
+    '''    
+    ## Define the vertical slice array:
+    i_interval=0.2 # vertical step height NOTE:  Make sure you're considering units here
+    i_rng=10 # maximum height NOTE:  What should this be??
+    arr_slices = np.arange(i_interval, i_rng, i_interval)      
     
     # Open the HAND layer:
     with rasterio.open(str(str_hand_path)) as ds_hand:  
         
-        out_meta = ds_hand.meta.copy()
-        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
-        arr_fim[:,:] = out_meta['nodata']
+#        out_meta = ds_hand.meta.copy()
+        res = ds_hand.resolution
+#        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
+#        arr_fim[:,:] = out_meta['nodata']
 
-#        lst_linkno=[]
+        # Open the slope layer:
+        with rasterio.open(str(str_slp_path)) as ds_slp:        
         
-        ## Open the catchment polygon layer:
-        with fiona.open(np.str(str_sheds_path), 'r') as sheds:
-        
-            for shed in sheds:
-                
-                ## Get the linkno:
-                linkno = shed['properties']['gridcode']    
-    
-                ## Mask the HAND grid for each catchment polygon:
-                w_hand, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)   
-                
-                ## ALSO mask the slp grid:
-                w_slp, out_tranform = rasterio.mask.mask(ds_slp, [shed['geometry']], crop=True)
-
-                ## 
-                i_rng=10
-                arr_slices = np.arange(i_interval, i_rng, i_interval)    
-                
-                lst_count=[]
-                lst_width=[]
-                
-                ## Get reach length here from the attribute table?
-                
-#                tot_len = reach_buff_len + 2*reach_buff_width # for rounded cap style; else tot_len = reach_buff_len (square)
-                
-                # List comprehension here instead??
-                for i_step in arr_slices: 
+            ## Open the catchment polygon layer:
+            with fiona.open(np.str(str_sheds_path), 'r') as sheds:
             
-                    num_pixels = w_hand[(w_hand<=i_step) & (w_hand>=0.)].size
+                ## Loop over catchments:
+                for shed in sheds:
                     
-                    w_slp_i = w_slp
-                       
-                    lst_count.append(num_pixels) # number of pixels greater than or equal to zero and less than the height interval
+                    ## Get the linkno:
+                    linkno = shed['properties']['gridcode']    
+        
+                    ## Mask the HAND grid for each catchment polygon:
+                    w_hand, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)   
+                    
+                    ## ALSO mask the slp grid:
+                    w_slp, out_tranform = rasterio.mask.mask(ds_slp, [shed['geometry']], crop=True)  
+                    
+#                    lst_count=[]
+                    lst_props=[]
+                    
+                    ## Get reach length here from the attribute table?
+                    length = shed['properties']['reach_length'] 
+                    
+    #                tot_len = reach_buff_len + 2*reach_buff_width # for rounded cap style; else tot_len = reach_buff_len (square)
+                    
+                    # List comprehension here instead??
+                    for i, i_step in enumerate(arr_slices): 
                         
-                    ## Surface area of inundated zone:
-                    area_pixels = num_pixels*(res**2)
-                    
-                    ## Channel bed area of inundated zone:
-                    area_pixels*(1 - w_slp)
-                    
-                    # Calculate width by stretching it along the length of the 2D Xn...
-                    lst_width.append(area_pixels/(tot_len))                
+                        i_hand_w = w_hand[(w_hand<=i_step) & (w_hand>=0.)]
+                
+                        i_num_pixels = i_hand_w.size
+                        
+                        ## Create a boolean array to use for selecting the slope pixels for this step:
+                        i_hand_bool = (i_hand_w > 0)
+                        
+                        i_slp_w = w_slp[i_hand_bool]
+                           
+#                        lst_count.append(i_num_pixels) # number of pixels greater than or equal to zero and less than the height interval
+                            
+                        ## Surface area of inundated zone:
+                        area_surf = i_num_pixels*(res**2)
+                        
+                        ## Channel bed area of inundated zone:
+                        area_bed = area_surf*(1 + i_slp_w**2)**0.5
+                        
+                        ## Volume of this slice:
+                        volume = area_surf*i_interval # cubic meters correct?
+                        
+                        ## Cross-sectional area:
+                        area_xn = volume/length
+                        
+                        ## Wetted perimeter:
+                        wetted_p = area_bed/length
+                        
+                        ## Top width:
+                        top_width = area_surf/length
+                        
+                        ## Hydraulic radius:
+                        hyd_radius = area_xn/wetted_p
+                        
+                        ## Add to list:
+                        lst_props.append((linkno, area_surf, area_bed, volume, area_xn, wetted_p, top_width, hyd_radius))
+                        
+        
     
     
+                df_props = pd.DataFrame(lst_props, columns=['linkno', 'area_surf', 'area_bed', 'volume',
+                                                            'area_xn', 'wetted_p', 'top_width', 'hyd_radius'])
     
-    
-    
-    
+                df_props.to_csv('df_props.csv')
     
     return
 
