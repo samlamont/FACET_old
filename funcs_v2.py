@@ -1070,6 +1070,79 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
     df_h.to_csv(str_csv_path)
         
     return 
+
+# ===============================================================================
+#  Reach characteristics from HAND
+# =============================================================================== 
+def reach_characteristics_hand(str_sheds_path, str_hand_path):
+    '''
+    Calculate the reach geometry metrics necessary for synthetic
+    rating curve derivation from HAND grids.
+    
+    Returns: TO DO
+    '''
+    i_interval=0.2 # vertical step height
+    
+    # Open the HAND layer:
+    with rasterio.open(str(str_hand_path)) as ds_hand:  
+        
+        out_meta = ds_hand.meta.copy()
+        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
+        arr_fim[:,:] = out_meta['nodata']
+
+#        lst_linkno=[]
+        
+        ## Open the catchment polygon layer:
+        with fiona.open(np.str(str_sheds_path), 'r') as sheds:
+        
+            for shed in sheds:
+                
+                ## Get the linkno:
+                linkno = shed['properties']['gridcode']    
+    
+                ## Mask the HAND grid for each catchment polygon:
+                w_hand, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)   
+                
+                ## ALSO mask the slp grid:
+                w_slp, out_tranform = rasterio.mask.mask(ds_slp, [shed['geometry']], crop=True)
+
+                ## 
+                i_rng=10
+                arr_slices = np.arange(i_interval, i_rng, i_interval)    
+                
+                lst_count=[]
+                lst_width=[]
+                
+                ## Get reach length here from the attribute table?
+                
+#                tot_len = reach_buff_len + 2*reach_buff_width # for rounded cap style; else tot_len = reach_buff_len (square)
+                
+                # List comprehension here instead??
+                for i_step in arr_slices: 
+            
+                    num_pixels = w_hand[(w_hand<=i_step) & (w_hand>=0.)].size
+                    
+                    w_slp_i = w_slp
+                       
+                    lst_count.append(num_pixels) # number of pixels greater than or equal to zero and less than the height interval
+                        
+                    ## Surface area of inundated zone:
+                    area_pixels = num_pixels*(res**2)
+                    
+                    ## Channel bed area of inundated zone:
+                    area_pixels*(1 - w_slp)
+                    
+                    # Calculate width by stretching it along the length of the 2D Xn...
+                    lst_width.append(area_pixels/(tot_len))                
+    
+    
+    
+    
+    
+    
+    
+    return
+
     
 # ===============================================================================
 #  Analyze DEM in vertical slices using an individual polygon
