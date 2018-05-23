@@ -575,22 +575,41 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #            mpipath = 'r' +  '"' + mpipath + '"'
 #            fel = 'r' +  '"' + fel + '"'
             
-            print('mpipath: ' + mpipath)            
-            print('fel: ' + fel_breach)
-            print(' ')
-#            sys.exit()
-            # End tesing
+#            print('mpipath: ' + mpipath)            
+#            print('fel: ' + fel_breach)
+#            print(' ')
             
+#            # ==============  << 1. Pit Filling with TauDEM >> ================ 
+#            cmd = 'mpiexec' + ' -n ' + inputProc + ' PitRemove -z ' + '"' + str_dem_path_tif + '"' + ' -fel ' + '"' + fel_pitremove + '"'
+#            
+#            # Submit command to operating system
+#            print('Running TauDEM PitRemove...')
+#            os.system(cmd)
+#            
+#            # Capture the contents of shell command and print it to the arcgis dialog box
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+#            
+#            # Get some feedback from the process to print out...
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                line = line.decode()
+#                if isinstance(line, bytes):	   # true in Python 3
+#                    line = line.decode()
+#                message = message + line        
+#            print(message)                
             
-    #        # ==============  << 3. D8 FDR with TauDEM >> ================        
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
-                  ' -sd8 ' + '"' + sd8 + '"'
-            print(cmd)
-            
+ 
+            # ==============  << 2. D8 FDR with TauDEM >> ================        
+#            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
+#                  ' -sd8 ' + '"' + sd8 + '"'
+                  
+            cmd = 'mpiexec' + ' -n ' + inputProc + ' D8FlowDir -fel ' + '"' + dem_filename + '"' + ' -p ' + '"' + p + '"' + \
+                  ' -sd8 ' + '"' + sd8 + '"'                  
+                          
             # Submit command to operating system
             print('Running TauDEM D8 Flow Direction...')
             os.system(cmd)
-            
+#            
             # Capture the contents of shell command and print it to the arcgis dialog box
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
             
@@ -598,117 +617,117 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
             message = "\n"
             for line in process.stdout.readlines():
                 line = line.decode()
-    #            if isinstance(line, bytes):	   # true in Python 3
-    #                line = line.decode()
+                if isinstance(line, bytes):	   # true in Python 3
+                    line = line.decode()
                 message = message + line        
             print(message)    
                 
-    #        # ============= << 4. D8 FAC with TauDEM >> ================        
-    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
-            
-            # Submit command to operating system
-            print('Running TauDEM D8 FAC (with weight grid)...')
-            os.system(cmd)
-            # Capture the contents of shell command and print it to the arcgis dialog box
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            
-            message = "\n"
-            for line in process.stdout.readlines():
-                if isinstance(line, bytes):	    # true in Python 3
-                    line = line.decode()
-                message = message + line
-            print(message)   
-             
-            # ============= << 4.a AD8 no weight grid with TauDEM >> ================
-    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + areaD8 + ' -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
-            
-            # Submit command to operating system
-            print('Running TauDEM D8 FAC (no weights)...')
-            os.system(cmd)
-            # Capture the contents of shell command and print it to the arcgis dialog box
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            
-            message = "\n"
-            for line in process.stdout.readlines():
-                if isinstance(line, bytes):	    # true in Python 3
-                    line = line.decode()
-                message = message + line
-            print(message)            
-            
-            # ============= << 4.b StreamReachandWatershed with TauDEM >> ================      
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + streamnet + ' -fel ' + '"' + fel_breach + '"' + ' -p ' + '"' + p + '"' + \
-                  ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
-                  '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
-                  '"'        
-            # Submit command to operating system
-            print('Running TauDEM Stream Reach and Watershed...')
-            os.system(cmd)
-            
-            # Capture the contents of shell command and print it to the arcgis dialog box
-            process=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            
-            message = "\n"
-            for line in process.stdout.readlines():
-                if isinstance(line, bytes):	    # true in Python 3
-                    line = line.decode()
-                message = message + line        
-            print(message) 
-            
-            # Let's get rid of some output that we are not currently using...
-            try:
-    #            os.remove(w)
-                os.remove(coord)
-                os.remove(tree)
-                os.remove(ord_g)
-            except:
-                print('Warning: Problem removing files!')
-                pass
-                
-            # ============= << 5. Dinf with TauDEM >> =============                
-            print('Running TauDEM Dinfinity...')        
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfflowdir + ' -fel ' + '"' + fel_breach + '"' + ' -ang ' + '"' + ang + '"' + \
-                  ' -slp ' + '"' + slp + '"'
-            
-            # Submit command to operating system
-            os.system(cmd)
-            
-            # Capture the contents of shell command and print it to the arcgis dialog box
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-            
-            # Get some feedback from the process to print out...
-            message = "\n"
-            for line in process.stdout.readlines():
-                line = line.decode()
-        #            if isinstance(line, bytes):	   # true in Python 3
-        #                line = line.decode()
-                message = message + line        
-            print(message)            
-            
-            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
-            distmeth = 'v'
-            statmeth = 'ave'
-            
-            # Use original DEM here...
-            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
-            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + '  ' + dinfdistdown + ' -fel ' + '"' + str_dem_path + '"' + ' -ang ' + '"' + ang + '"' + \
-                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
-        
-            # Submit command to operating system
-            os.system(cmd)
-            
-            # Get some feedback from the process to print out...
-            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
-            
-            message = "\n"
-            for line in process.stdout.readlines():
-                line = line.decode()
-        #            if isinstance(line, bytes):	   # true in Python 3
-        #                line = line.decode()
-                message = message + line
-                
-            print(message)
+#    #        # ============= << 3.a AD8 with weight grid >> ================        
+#    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+#            cmd = 'mpiexec' + ' -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+#            
+#            # Submit command to operating system
+#            print('Running TauDEM D8 FAC (with weight grid)...')
+#            os.system(cmd)
+#            # Capture the contents of shell command and print it to the arcgis dialog box
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+#            
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                if isinstance(line, bytes):	    # true in Python 3
+#                    line = line.decode()
+#                message = message + line
+#            print(message)   
+#             
+#            # ============= << 3.b AD8 no weight grid >> ================
+#    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
+#            cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
+#            
+#            # Submit command to operating system
+#            print('Running TauDEM D8 FAC (no weights)...')
+#            os.system(cmd)
+#            # Capture the contents of shell command and print it to the arcgis dialog box
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+#            
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                if isinstance(line, bytes):	    # true in Python 3
+#                    line = line.decode()
+#                message = message + line
+#            print(message)            
+#            
+#            # ============= << 4 StreamReachandWatershed with TauDEM >> ================      
+#            cmd = 'mpiexec -n ' + inputProc + ' StreamNet -fel ' + '"' + fel_pitremove + '"' + ' -p ' + '"' + p + '"' + \
+#                  ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
+#                  '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
+#                  '"'        
+#            # Submit command to operating system
+#            print('Running TauDEM Stream Reach and Watershed...')
+#            os.system(cmd)
+#            
+#            # Capture the contents of shell command and print it to the arcgis dialog box
+#            process=subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+#            
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                if isinstance(line, bytes):	    # true in Python 3
+#                    line = line.decode()
+#                message = message + line        
+#            print(message) 
+#            
+#            # Let's get rid of some output that we are not currently using...
+#            try:
+#    #            os.remove(w)
+#                os.remove(coord)
+#                os.remove(tree)
+#                os.remove(ord_g)
+#            except:
+#                print('Warning: Problem removing files!')
+#                pass
+#                
+#            # ============= << 5. Dinf with TauDEM >> =============                
+#            print('Running TauDEM Dinfinity...')        
+#            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + fel_pitremove + '"' + ' -ang ' + '"' + ang + '"' + \
+#                  ' -slp ' + '"' + slp + '"'
+#            
+#            # Submit command to operating system
+#            os.system(cmd)
+#            
+#            # Capture the contents of shell command and print it to the arcgis dialog box
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+#            
+#            # Get some feedback from the process to print out...
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                line = line.decode()
+#        #            if isinstance(line, bytes):	   # true in Python 3
+#        #                line = line.decode()
+#                message = message + line        
+#            print(message)            
+#            
+#            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
+#            distmeth = 'v'
+#            statmeth = 'ave'
+#            
+#            # Use original DEM here...
+#            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
+#            cmd = 'mpiexec -n ' + inputProc + ' DinfDistDown -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
+#                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
+#        
+#            # Submit command to operating system
+#            os.system(cmd)
+#            
+#            # Get some feedback from the process to print out...
+#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
+#            
+#            message = "\n"
+#            for line in process.stdout.readlines():
+#                line = line.decode()
+#        #            if isinstance(line, bytes):	   # true in Python 3
+#        #                line = line.decode()
+#                message = message + line
+#                
+#            print(message)
 
     except:
         print("Unexpected error:", sys.exc_info()[0])
@@ -1079,7 +1098,102 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
     df_h.to_csv(str_csv_path)
         
     return 
+
+# ===============================================================================
+#  Reach characteristics from HAND
+# =============================================================================== 
+def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
+    '''
+    Calculate the reach geometry metrics necessary for synthetic
+    rating curve derivation from HAND grids.
     
+    Returns: TO DO
+    '''    
+    ## Define the vertical slice array:
+    i_interval=0.2 # vertical step height NOTE:  Make sure you're considering units here
+    i_rng=10 # maximum height NOTE:  What should this be??
+    arr_slices = np.arange(i_interval, i_rng, i_interval)      
+    
+    # Open the HAND layer:
+    with rasterio.open(str(str_hand_path)) as ds_hand:  
+        
+#        out_meta = ds_hand.meta.copy()
+        res = ds_hand.res[0]
+#        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
+#        arr_fim[:,:] = out_meta['nodata']
+
+        # Open the slope layer:
+        with rasterio.open(str(str_slp_path)) as ds_slp:        
+        
+            ## Open the catchment polygon layer:
+            with fiona.open(np.str(str_sheds_path), 'r') as sheds:
+            
+                ## Loop over catchments:
+                for shed in sheds:
+                    
+                    ## Get the linkno:
+                    linkno = shed['properties']['gridcode']    
+        
+                    ## Mask the HAND grid for each catchment polygon:
+                    w_hand, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)   
+                    
+                    ## ALSO mask the slp grid:
+                    w_slp, out_tranform = rasterio.mask.mask(ds_slp, [shed['geometry']], crop=True)  
+                    
+#                    lst_count=[]
+                    lst_props=[]
+                    
+                    ## Get reach length here from the attribute table?
+                    length = shed['properties']['gridcode'] ## JOIN ATTRIBUTES FROM NET??? 
+                    
+    #                tot_len = reach_buff_len + 2*reach_buff_width # for rounded cap style; else tot_len = reach_buff_len (square)
+                    
+                    # List comprehension here instead??
+                    for i, i_step in enumerate(arr_slices): 
+                        
+                        i_hand_w = w_hand[(w_hand<=i_step) & (w_hand>=0.)]
+                
+                        i_num_pixels = i_hand_w.size
+                        
+                        ## Create a boolean array to use for selecting the slope pixels for this step:
+                        i_hand_bool = (i_hand_w > 0)
+                        
+                        i_slp_w = w_slp[i_hand_bool]
+                           
+#                        lst_count.append(i_num_pixels) # number of pixels greater than or equal to zero and less than the height interval
+                            
+                        ## Surface area of inundated zone:
+                        area_surf = i_num_pixels*(res**2)
+                        
+                        ## Channel bed area of inundated zone:
+                        area_bed = area_surf*(1 + i_slp_w**2)**0.5
+                        
+                        ## Volume of this slice:
+                        volume = area_surf*i_interval # cubic meters correct?
+                        
+                        ## Cross-sectional area:
+                        area_xn = volume/length
+                        
+                        ## Wetted perimeter:
+                        wetted_p = area_bed/length
+                        
+                        ## Top width:
+                        top_width = area_surf/length
+                        
+                        ## Hydraulic radius:
+                        hyd_radius = area_xn/wetted_p
+                        
+                        ## Add to list:
+                        lst_props.append((linkno, area_surf, area_bed, volume, area_xn, wetted_p, top_width, hyd_radius))
+                                
+    ## Create final output dataframe:
+    df_props = pd.DataFrame(lst_props, columns=['linkno', 'area_surf', 'area_bed', 'volume',
+                                                'area_xn', 'wetted_p', 'top_width', 'hyd_radius'])
+    ## Write it to csv:
+    df_props.to_csv('df_props.csv')
+    
+    return
+   
 # ===============================================================================
 #  Analyze DEM in vertical slices using an individual polygon
 # =============================================================================== 
