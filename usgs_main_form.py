@@ -5,8 +5,11 @@ Created on Tue Dec  6 16:11:00 2016
 @author: sam.lamont
 """
 
-from PyQt5 import QtCore, QtGui, uic
-from PyQt5.QtWidgets import QMainWindow, QApplication
+#from PyQt5 import QtCore, QtGui, uic
+#from PyQt5.QtWidgets import QMainWindow, QApplication
+
+from PyQt4 import QtCore, QtGui, uic
+#from PyQt4 import QMainWindow, QApplication # Py
 
 #import time
 import glob
@@ -67,7 +70,7 @@ import funcs_v2
 # ===================================================================================
 #                                       MAIN
 # ===================================================================================
-class facet(QMainWindow):
+class facet(QtGui.QMainWindow): # 2.7, PyQt4
 #class facet(QtGui.QDialog):
 #class facet(QtGui.QTabWidget):
 #class MainForm(QtGui.QDialog, FORM_CLASS):
@@ -512,40 +515,42 @@ if __name__ == '__main__':
     #===============================================================================================    
     
     ## << FOR BULK PROCESSING >>
-    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
+    lst_paths = glob.glob('/home/sam/nwm/bulk_processing/*')
+    lst_paths.sort() # for testing
     
     for i, path in enumerate(lst_paths):
         
-        if i <= 2: continue
+        if i <= 3: continue
         print('Processing:  ' + path)
         
         start_time_i = timeit.default_timer()
-   
+    
         try:
             str_dem_path = glob.glob(path + '/*dem*.tif')[0]
             str_hand_path = glob.glob(path + '/*hand*.tif')[0]
             str_net_path = glob.glob(path + '/*net*.shp')[0]    
             str_sheds_path = glob.glob(path + '/*w_diss_physio*.shp')[0]
         except:
+            print('WARNING:  There is an error in the paths!')
             pass # depending on what's being run, it might not matter if a file doesn't exist
         
         path_to_dem, dem_filename = os.path.split(str_dem_path)
         csv_filename = dem_filename[:-8] + '.csv'
-        str_csv_path = path_to_dem + '\\' + csv_filename
+        str_csv_path = path_to_dem + '/' + csv_filename
         
         # Output layers...
-        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
-        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
-        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
+        str_xns_path = path_to_dem + '/' + dem_filename[:-8] + '_xns.shp'
+        str_bankpts_path = path_to_dem + '/' + dem_filename[:-8] + '_bankpts.shp'
+        str_bankpixels_path = path_to_dem + '/' + dem_filename[:-8] + '_bankpixels.tif'
         
         # << GET CELL SIZE >>
         cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 
         # << BUILD STREAMLINES COORDINATES >>
-        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
-        df_coords.to_csv(str_csv_path)
-#        df_coords = pd.read_csv(str_csv_path, )    
-#        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N     
+#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords.to_csv(str_csv_path)
+        df_coords = pd.read_csv(str_csv_path, )    
+        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N     
 
         # ============================= << CROSS SECTION ANALYSES >> =====================================
 #        # << CREATE Xn SHAPEFILES >>
@@ -558,12 +563,12 @@ if __name__ == '__main__':
 #        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
         
         # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
-        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
-
-        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)        
+#        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
+#
+#        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)        
         
         # ============================= << DELINEATE FIM >> =====================================
-#        funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
+        funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
 #        
 #        break # for testing
         
@@ -644,17 +649,17 @@ if __name__ == '__main__':
     
 #    funcs_v2.clip_features(str_net_in_path, str_output_nhdhires_path, str_dem_path)     
     
-##    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
-    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
-    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
-    str_whitebox_path= r"C:\gospatial\go-spatial_win_amd64.exe" # Go version
-###    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
-##    
-    run_whitebox = False
-    run_wg = False
-    run_taudem = True
+###    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
+#    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
+#    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
+#    str_whitebox_path= r"C:\gospatial\go-spatial_win_amd64.exe" # Go version
+####    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
 ###    
-    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
+#    run_whitebox = False
+#    run_wg = False
+#    run_taudem = True
+####    
+#    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
 #    
     print('\n<<< End >>>\r\n')
     print('Total Run Time:  {}'.format(timeit.default_timer() - start_time_0))
