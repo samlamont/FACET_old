@@ -402,79 +402,43 @@ if __name__ == '__main__':
     
 #    funcs = funcs_v2.workerfuncs()
 ##    
-    ## << DEM (raw or fel?) >>
-#    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_dem_clip_utm18.tif'
-#    str_dem_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\sam_test\dr3m_raw_dem_clip_utm18.tif'
-#    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020801030602_RappahannockRiver\corrected\rappahannock_filled_utm18.tif"
-#    str_dem_path = r'D:\fernando\HAND\020802\020802_utm.tif' # 10 m
-#    str_dem_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM.tif'
-#    str_dem_path = r'D:\CFN_data\DEM_Files\020503010802_MahantangoCreek\DEM.tif'    
-#    str_dem_path = r'D:\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\DEM_utm18.tif'
-#    str_dem_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach.tif'
-#    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040203_crash\02040203_upper.dep"
-#    str_dem_path = r"C:\Terrain_and_Bathymetry\OWP\hand_experiments\bwt\bwt_topobathy_huc6.dep"    
-#    str_dem_path = r'D:\Terrain_and_Bathymetry\OWP\grids\121003_SanAntonio\121003.dep'
-#    str_dem_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020700081004_DifficultRun\facet\dr_utm18.tif"
-#    str_dem_path = r"B:\Terrain\DelawareRiverBasin\DEMs_3m\02040104\02040104_lower.tif"
+    ## << PATHS >>
+    ## DEM:
+    str_dem_path = r"D:\hand\nfie\020700\020700dd.tif"
     
-    ## << VECTOR STREAMLINES (net) >>  
-#    str_net_in_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\nhdhires_chillisquaque.shp'
-#    str_net_in_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_nhdhires.shp'
-#    str_net_in_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_breach_net.shp'
-#    str_site_nhdhires_path = r'D:\CFN_data\nhd_hires\nhdhires_choptank0206_utm18.shp'
-#    str_site_nhdhires_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\nhd_hires\dr_nhd_hires_utm18.shp'
-#    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_net.shp'
-#    str_net_path = r'C:\USGS_TerrainBathymetry_Project\CBP_analysis\DifficultRun\headwaters\upperreaches.shp'
-#    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\dr3m_net_raw.shp'
-#    str_net_in_path = r'D:\fernando\HAND\020802\020802-flows-utm.shp'
-#    str_net_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr3m_raw_net.shp'
-#    str_net_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_net.shp'
-#    str_net_in_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020700081004_DifficultRun\facet\dr_nhdhires_utm18.shp"
-#    str_net_in_path = r"C:\Terrain_and_Bathymetry\OWP\hand_experiments\guadalupe\bwtombigbee_nwm_route_link.shp"
-#    str_net_in_path = r'D:\Terrain_and_Bathymetry\USGS\DRB_2016\gis\drb_dems\02040105_crash\nhdhires_02040104.shp'
-#    str_net_in_path = r"B:\Terrain\DelawareRiverBasin\DEMs_3m\02040104\nhdhires_02040104_clip_lower.shp"
+    ## Slope:
+    str_slp_path = r"D:\drb\02040205\02040205_breach_dem_sd8.tif"
+    
+    ## Vector streamlines:
+    str_net_in_path = r"D:\hand\nfie\020700\020700-flows.shp"
       
-    ## << BANK PIXELS >>   
+    ## Bank pixels:   
 #    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
-#    str_bankpixels_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\bankpixels_raw_dem_wavelet_1.0_std.tif'
-#    str_bankpixels_path =r'D:\fernando\HAND\020802\0202802_utm_bankpixels.tif'
-#    str_bankpixels_path =r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_bankpixels.tif'
     
-    ## << BANK POINTS >>    
+    ## Bank points:   
 #    str_bankpts_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpts_TEST.shp'
-#    str_bankpts_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr_bankpts_test.shp'
  
-    ## << FLOODPLAIN >>
+    ## Floodplain:
 #    str_floodplain_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_breach_hand_slice2.3.tif'    
     
-    ## << CROSS SECTIONS >>    
-#    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\chan_xns_TEST.shp'
-#    str_xns_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\fp_xns.shp'
-#    str_xns_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr_xns_test.shp'
+    ## Cross sections:    
+    str_xns_path = r"D:\hand\nfie\020700\020700_xns_test.shp"
 
-    ## << HAND >>    
-#    str_hand_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMhand.tif'
-#    str_hand_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\facet\DEM_utm18_breach_hand.tif"
-#    str_hand_path = r'D:\CFN_data\DEM_Files\020600050203_ChoptankRiver\01_02_03_04_utm18_breach_hand.tif'
-#    str_hand_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020600060202_LittlePatuxentRiver\facet\littlepawtuxent_dem_utm18_breach_hand.tif"
+    ## HAND:
+    str_hand_path = r"D:\drb\02040205\02040205_breach_hand.tif"
     
-    ## << SHEDS >>
-#    str_sheds_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\CFN_data\DEM_Files\020503050802_QuittapahillaCreek\facet\quittapahilla_utm18_breach_sheds.shp"
+    ## Catchments:
+    str_sheds_path = r"D:\drb\02040205\02040205_w_diss_physio.shp"
     
-    ## << START POINTS >>
+    ## Channel start points:
 #    str_startptgrid_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEMnet_UNIQUE_ID.shp'
-#    str_startptgrid_path= r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\breach\dr_nhd_hires_dangles.tif'
-#    str_danglepts_path=r'D:\fernando\HAND\020802\sam_test\020802_dangles.tif'
     
-    ## << OPENNESS >>  THIS NEEDS WORK -- Table this til later if you have time (July5)
+    ## Openness: THIS NEEDS WORK -- Table this til later if you have time (July5)
 #    str_pos_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\dr_pos_raw.tif'    
-#    str_pos_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\openness\Openness\diffphix_pos' 
-#    str_neg_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\facet_tests\dr_neg_raw.tif'    
     
-    ## << FLOW DIRECTION >> For discerning between right/left bank
+    ## Flow direction: For discerning between right/left bank?
 #    str_fdr_path = r"D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_raw_dem_clip_utm18_breach_p.tif"    
-    
-    
+        
     str_reachid='LINKNO'
 #    str_reachid='ARCID'
 #    str_reachid='COMID'
@@ -507,81 +471,81 @@ if __name__ == '__main__':
     # - Xn length
     # - Above Xn parameters    
     
-    #=============================================================================================== 
-    #                             BEGIN BULK PROCESSING LOOP
-    #===============================================================================================    
-    
-    ## << FOR BULK PROCESSING >>
-    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
-    
-    for i, path in enumerate(lst_paths):
-        
-        if i <= 2: continue
-        print('Processing:  ' + path)
-        
-        start_time_i = timeit.default_timer()
-   
-        try:
-            str_dem_path = glob.glob(path + '/*dem*.tif')[0]
-            str_hand_path = glob.glob(path + '/*hand*.tif')[0]
-            str_net_path = glob.glob(path + '/*net*.shp')[0]    
-            str_sheds_path = glob.glob(path + '/*w_diss_physio*.shp')[0]
-        except:
-            pass # depending on what's being run, it might not matter if a file doesn't exist
-        
-        path_to_dem, dem_filename = os.path.split(str_dem_path)
-        csv_filename = dem_filename[:-8] + '.csv'
-        str_csv_path = path_to_dem + '\\' + csv_filename
-        
-        # Output layers...
-        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
-        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
-        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
-        
-        # << GET CELL SIZE >>
-        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
-
-        # << BUILD STREAMLINES COORDINATES >>
-        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
-        df_coords.to_csv(str_csv_path)
-#        df_coords = pd.read_csv(str_csv_path, )    
-#        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N     
-
-        # ============================= << CROSS SECTION ANALYSES >> =====================================
-#        # << CREATE Xn SHAPEFILES >>
-#        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
+#    #=============================================================================================== 
+#    #                             BEGIN BULK PROCESSING LOOP
+#    #===============================================================================================    
+#    
+#    ## << FOR BULK PROCESSING >>
+#    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
+#    
+#    for i, path in enumerate(lst_paths):
+#        
+#        if i <= 2: continue
+#        print('Processing:  ' + path)
+#        
+#        start_time_i = timeit.default_timer()
+#   
+#        try:
+#            str_dem_path = glob.glob(path + '/*dem*.tif')[0]
+#            str_hand_path = glob.glob(path + '/*hand*.tif')[0]
+#            str_net_path = glob.glob(path + '/*net*.shp')[0]    
+#            str_sheds_path = glob.glob(path + '/*w_diss_physio*.shp')[0]
+#        except:
+#            pass # depending on what's being run, it might not matter if a file doesn't exist
+#        
+#        path_to_dem, dem_filename = os.path.split(str_dem_path)
+#        csv_filename = dem_filename[:-8] + '.csv'
+#        str_csv_path = path_to_dem + '\\' + csv_filename
+#        
+#        # Output layers...
+#        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
+#        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
+#        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
+#        
+#        # << GET CELL SIZE >>
+#        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 #
-#        # << INTERPOLATE ELEVATION ALONG Xns >>
-#        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+#        # << BUILD STREAMLINES COORDINATES >>
+#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords.to_csv(str_csv_path)
+##        df_coords = pd.read_csv(str_csv_path, )    
+##        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N     
+#
+#        # ============================= << CROSS SECTION ANALYSES >> =====================================
+##        # << CREATE Xn SHAPEFILES >>
+##        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
+##
+##        # << INTERPOLATE ELEVATION ALONG Xns >>
+##        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+##        
+##        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
+##        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
 #        
-#        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
-#        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
-        
-        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
-        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
-
-        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)        
-        
-        # ============================= << DELINEATE FIM >> =====================================
-#        funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
+#        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
+#        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
+#
+#        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)        
 #        
-#        break # for testing
-        
-        # ==================== CHANNEL WIDTH, FLOODPLAIN WIDTH, HAND ANALYSIS ALL IN ONE ===========
-#        funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_buffxnlen, str_hand_path, parm_ivert)    
-        
-        print('\nRun time for {}:  {}\r\n'.format(path, timeit.default_timer() - start_time_i))
-    #=============================================================================================== 
-    #                               END BULK PROCESSING LOOP
-    #===============================================================================================
+#        # ============================= << DELINEATE FIM >> =====================================
+##        funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
+##        
+##        break # for testing
+#        
+#        # ==================== CHANNEL WIDTH, FLOODPLAIN WIDTH, HAND ANALYSIS ALL IN ONE ===========
+##        funcs_v2.channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, p_buffxnlen, str_hand_path, parm_ivert)    
+#        
+#        print('\nRun time for {}:  {}\r\n'.format(path, timeit.default_timer() - start_time_i))
+#    #=============================================================================================== 
+#    #                               END BULK PROCESSING LOOP
+#    #===============================================================================================
     # << GET CELL SIZE >>
-#    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
+    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
   
 ##    # << BUILD STREAMLINES COORDINATES >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
-#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
+    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_in_path, cell_size, str_reachid, str_orderid) # YES!
     
-#    df_coords.to_csv('df_coords_Chillisquaque.csv') # just for testing
+    df_coords.to_csv(r"D:\hand\nfie\020700\df_coords_020700.csv") # just for testing
     
 #    print('NOTE:  Reading pre-calculated csv file...')
 #    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
@@ -644,18 +608,18 @@ if __name__ == '__main__':
     
 #    funcs_v2.clip_features(str_net_in_path, str_output_nhdhires_path, str_dem_path)     
     
-##    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
-    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
-    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
-    str_whitebox_path= r"C:\gospatial\go-spatial_win_amd64.exe" # Go version
-###    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
-##    
-    run_whitebox = False
-    run_wg = False
-    run_taudem = True
+###    # (2) Do all Whitebox and TauDEM functions including HAND based on output r'"C:\Program Files\TauDEM\TauDEM5Exe\D8FlowDir.exe"'
+#    str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
+#    str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
+#    str_whitebox_path= r"C:\gospatial\go-spatial_win_amd64.exe" # Go version
+####    str_whitebox_path= r'C:\Terrain_and_Bathymetry\Whitebox\WhiteboxTools\whitebox_tools.exe'   # Rust version
 ###    
-    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
-#    
+#    run_whitebox = False
+#    run_wg = False
+#    run_taudem = True
+####    
+#    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
+##    
     print('\n<<< End >>>\r\n')
     print('Total Run Time:  {}'.format(timeit.default_timer() - start_time_0))
     
