@@ -997,6 +997,129 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
     return   
 
 # ===============================================================================
+#  Reach characteristics from HAND
+# =============================================================================== 
+def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
+    '''
+    Calculate the reach geometry metrics necessary for synthetic
+    rating curve derivation from HAND grids.
+    
+    Returns: Dataframe.  Channel properties (m) and Q in cms
+    '''    
+    ## Define the vertical slice array:
+    interval=0.3048 # vertical step height NOTE:  Make sure you're considering units here
+    rng=25 # maximum height NOTE:  What should this be?? (25 is the NFIE setting)
+    arr_slices = np.arange(interval, rng, interval)  
+    
+    roughness = 0.05 # Hardcode for now (units of meters)
+    
+#    arr_inds = np.arange(0, len(arr_slices)-1)
+
+    lst_props=[]    
+    
+    # Open the HAND layer:
+    with rasterio.open(str(str_hand_path)) as ds_hand:  
+        
+#        hand_mask = ds_hand.read_masks(1)
+        
+#        nodata = ds_hand.nodata
+#        out_meta = ds_hand.meta.copy()
+#        res = ds_hand.res[0]  # CAREFUL:  If WGS, resolution is in degrees
+        res=10. # meters
+#        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
+#        arr_fim[:,:] = out_meta['nodata']
+
+        # Open the slope layer:
+        with rasterio.open(str(str_slp_path)) as ds_slp:        
+
+            ## Open the catchment polygon layer:
+            with fiona.open(np.str(str_sheds_path), 'r') as sheds:                   
+                
+                ## Loop over catchments:
+                for shed in sheds:
+                    
+                    ## Get the linkno:
+                    linkno = shed['properties']['FEATUREID']    
+                    
+                    if linkno != 4509202: continue
+                    
+                    print(linkno)
+        
+                    ## Mask the HAND grid for each catchment polygon:
+                    w_hand, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True, filled=False, invert=False)   
+                    
+                    ## ALSO mask the slp grid:
+                    w_slp, out_tranform = rasterio.mask.mask(ds_slp, [shed['geometry']], crop=True, filled=False, invert=False)  
+                    
+                    ## Get reach length here from the attribute table?
+                    length = shed['properties']['LENGTHKM']*1000 # Make sure units are correct (should be meters)
+                    
+                    ## Get reach slope:
+                    slope = shed['properties']['SLOPE']
+                                        
+                    # Vertical slice loop:
+                    for i_step in arr_slices: 
+                        
+                        try:
+                                                        
+                            i_hand_w = w_hand - i_step
+#                            i_hand_w = i_hand_w[i_hand_w<0]
+#                            i_hand_w = w_hand[(w_hand<=i_step) & (w_hand>=0)]
+                            arr_inun = i_hand_w[i_hand_w<0]
+                            i_num_pixels = arr_inun.size
+                            
+                            test = i_hand_w <= 0
+                            cell_height = i_hand_w[test]
+                            volume = 10*10*cell_height.sum()
+                            
+                            ## Create a boolean array to use for selecting the slope pixels for this step:
+#                            i_hand_bool = ((w_hand<=i_step)&(w_hand>=0))
+    
+                            ## Slope grid values for this HAND interval:                            
+                            i_slp_w = w_slp[i_hand_w<0]                               
+                                
+                            ## Surface area of inundated zone:
+                            area_surf = i_num_pixels*(res**2)
+                            
+                            ## Channel bed area of inundated zone:
+                            area_bed = ((res**2)*(1 + i_slp_w**2)**0.5).sum()
+                            
+                            ## Volume of this slice:
+                            volume = ((res**2)*arr_inun).sum()*-1. # cubic meters correct?
+                            # volume = area_surf*i_interval 
+                            
+                            ## Cross-sectional area:
+                            area_xn = volume/length
+                            
+                            ## Wetted perimeter:
+                            wetted_p = area_bed/length
+                            
+                            ## Top width:
+                            top_width = area_surf/length
+                            
+                            ## Hydraulic radius:
+                            hyd_radius = area_xn/wetted_p
+                            
+                            ## Calculate Q from Manning's equation:
+                            Q = (1/roughness)*area_xn*(hyd_radius**0.667)*(slope**0.5)
+                            
+                            ## Add to list:
+                            lst_props.append((linkno, i_step, area_surf, area_bed, volume, area_xn, wetted_p, top_width, hyd_radius, Q))                        
+                            
+#                        except Exception as e:
+#                            print('Exception!: {}'.format(str(e)))
+#                            sys.exit()
+                        except:
+                            pass # end of loop
+                            
+    ## Create final output dataframe:
+    df_props = pd.DataFrame(lst_props, columns=['linkno', 'height', 'area_surf', 'area_bed', 'volume',
+                                                'area_xn', 'wetted_p', 'top_width', 'hyd_radius', 'Q'])
+    ## Write it to csv:
+    df_props.to_csv(r"D:\hand\nfie\020700\difficult_run\dr_hydroprops_test.csv")
+    
+    return
+# ===============================================================================
 #  Delineate a FIM from the HAND grid using depth at each polygon (eg, catchment)
 #
 #    1. Read in catchment polygons (assume these have attributes necessary for regression?)
