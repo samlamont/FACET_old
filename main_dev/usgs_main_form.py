@@ -474,7 +474,7 @@ if __name__ == '__main__':
     # - Xn length
     # - Above Xn parameters    
     
-<<<<<<< HEAD
+
 #    #=============================================================================================== 
 #    #                             BEGIN BULK PROCESSING LOOP
 #    #===============================================================================================    
@@ -508,7 +508,7 @@ if __name__ == '__main__':
 #        
 #        # << GET CELL SIZE >>
 #        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
-=======
+
     #=============================================================================================== 
     #                             BEGIN BULK PROCESSING LOOP
     #===============================================================================================    
@@ -554,7 +554,6 @@ if __name__ == '__main__':
         # ============================= << CROSS SECTION ANALYSES >> =====================================
 #        # << CREATE Xn SHAPEFILES >>
 #        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
->>>>>>> a7c28a33ea08d39ef3cf726c452f9db4a6975112
 #
 #        # << BUILD STREAMLINES COORDINATES >>
 #        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
@@ -572,12 +571,10 @@ if __name__ == '__main__':
 ##        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
 ##        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
 #        
-<<<<<<< HEAD
 #        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
 #        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
 #
 #        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)        
-=======
 #        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
 #        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
         
@@ -588,7 +585,6 @@ if __name__ == '__main__':
         
         # ============================= << DELINEATE FIM >> =====================================
         funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
->>>>>>> a7c28a33ea08d39ef3cf726c452f9db4a6975112
 #        
 #        # ============================= << DELINEATE FIM >> =====================================
 ##        funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
@@ -683,11 +679,7 @@ if __name__ == '__main__':
 #    run_taudem = True
 ####    
 #    funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)    
-<<<<<<< HEAD
-##    
-=======
-#    
->>>>>>> a7c28a33ea08d39ef3cf726c452f9db4a6975112
+
     print('\n<<< End >>>\r\n')
     print('Total Run Time:  {}'.format(timeit.default_timer() - start_time_0))
     
