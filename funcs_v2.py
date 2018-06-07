@@ -1016,7 +1016,7 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
         lst_h=[]
         lst_linkno=[]
         lst_prov=[]
-        
+
         # Open the catchment polygon layer...
         with fiona.open(np.str(str_sheds_path), 'r') as sheds:
         
@@ -1031,13 +1031,13 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
                 # Get the Drainage Area in km^2...
                 da_km2 = shed['properties']['DSContArea']/1000000
                 
-                if (prov == 'COASTAL PLAIN' and da_km2 >= 33 and da_km2 <= 2792):
+                if (prov == 'COASTAL PLAIN' and da_km2 >= 3 and da_km2 <= 3000):
                     h = 1.65
-                elif (prov == 'PIEDMONT' and da_km2 >= 20 and da_km2 <= 1604):
+                elif (prov == 'PIEDMONT' and da_km2 >= 3 and da_km2 <= 3000):
                     h = (np.log10(da_km2)*0.471 + 0.523)**2
-                elif (prov == 'VALLEY AND RIDGE' and da_km2 >= 16 and da_km2 <= 1748):
+                elif (prov == 'VALLEY AND RIDGE' and da_km2 >= 3 and da_km2 <= 3000):
                     h = (np.log10(da_km2)*0.471 + 0.375)**2
-                elif (prov == 'APPALACHIAN PLATEAUS' and da_km2 >= 52 and da_km2 <= 285):
+                elif (prov == 'APPALACHIAN PLATEAUS' and da_km2 >= 3 and da_km2 <= 3000):
                     h = (np.log10(da_km2)*0.471 + 0.041)**2
                 else:
                     lst_h.append(-9999)
@@ -1051,40 +1051,49 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
                 
 #                buff = mapping(shed)                            
                 
-                # Mask the bankpts file for each feature...
-                w, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)            
+                try:
+                    # Mask the bankpts file for each feature...
+                    w, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True)            
+                    
         
-#                w[(w<=h) & (w>=0.)] # Get HAND depth below h
-                w[(w>h)] = out_meta['nodata'] # Assign NoData to everywhere else
-#                w[(w<0.)] = out_meta['nodata'] # Assign NoData to everywhere else
-                
-                # Now write out the FIM for this shed...
-                w = w[0]                                                        
-                shp=np.shape(w)                                
-                bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)                                
-                col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3]) # upper left row and column of window?                                
-                
-                row_min = np.int(row_min)                            
-                col_min = np.int(col_min)
-                row_max = np.int(row_min + shp[0])
-                col_max = np.int(col_min + shp[1])    
+    #                w[(w<=h) & (w>=0.)] # Get HAND depth below h
+                    w[(w>h)] = out_meta['nodata'] # Assign NoData to everywhere else
+    #                w[(w<0.)] = out_meta['nodata'] # Assign NoData to everywhere else
+                    
+                    # Now write out the FIM for this shed...
+                    w = w[0]                                                        
+                    shp=np.shape(w)  
+                              
+                    bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)                                
 
-                arr_w = np.empty([row_max-row_min, col_max-col_min], dtype=out_meta['dtype'])
-                arr_w[:,:] = arr_fim[row_min:row_max, col_min:col_max]
-#                
-                inds_lt = np.where(arr_fim[row_min:row_max, col_min:col_max]<w)
-                arr_w[inds_lt] = w[inds_lt]
+    #                col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3]) # RAsterio v1.x upper left row and column of window?                                
+                    col_min, row_min = ~ds_hand.affine * (bounds[0], bounds[3])
+                    
+                    row_min = np.int(row_min)                            
+                    col_min = np.int(col_min)
+                    row_max = np.int(row_min + shp[0])
+                    col_max = np.int(col_min + shp[1])    
+    
+                    arr_w = np.empty([row_max-row_min, col_max-col_min], dtype=out_meta['dtype'])
+                    arr_w[:,:] = arr_fim[row_min:row_max, col_min:col_max]
+    #                
+                    inds_lt = np.where(arr_fim[row_min:row_max, col_min:col_max]<w)
+                    arr_w[inds_lt] = w[inds_lt]
+    
+                    arr_fim[row_min:row_max, col_min:col_max] = arr_w # assign the FIM window for this catchment to the total array                                    
+                except:
+                    print('WARNING:  Problem masking HAND grid using catchment Linkno:  ' + str(linkno))                
+                
 
-                arr_fim[row_min:row_max, col_min:col_max] = arr_w # assign the FIM window for this catchment to the total array                    
     
     # Write out the final FIM grid...
-    print('Writing final FIM .tif file...')   
-    str_fim_path = str_hand_path[:-4]+'_fim.tif'
+#    print('Writing final FIM .tif file...')   
+    str_fim_path = str_hand_path[:-4]+'_3sqkm_fim.tif'
     with rasterio.open(str_fim_path, "w", **out_meta) as dest:
         dest.write(arr_fim, indexes=1) 
         
     # Write HAND heights to csv...
-    str_csv_path = str_hand_path[:-4]+'_fim_h.csv'
+    str_csv_path = str_hand_path[:-4]+'_3sqkm_fim_h.csv'
     df_h = pd.DataFrame({str_reachid:lst_linkno, 'prov':lst_prov, 'h':lst_h})
     df_h.to_csv(str_csv_path)
         
@@ -1330,7 +1339,7 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
         with rasterio.open(str_dem_path) as ds_dem:
         
             # Transform to pixel space
-            df_coords['col'], df_coords['row'] = ~ds_dem.transform * (df_coords['x'], df_coords['y'])   
+            df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])   
             
             df_coords[['row','col']] = df_coords[['row','col']].astype(np.int32)  
             df_coords.drop_duplicates(['col','row'], inplace=True) # rounding to integer
