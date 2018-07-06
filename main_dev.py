@@ -5,10 +5,10 @@ Created on Tue Dec  6 16:11:00 2016
 @author: sam.lamont
 """
 
-#from PyQt5 import QtCore, QtGui, uic
-#from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5 import QtCore, QtGui, uic
+from PyQt5.QtWidgets import QMainWindow, QApplication
 
-from PyQt4 import QtCore, QtGui, uic
+#from PyQt4 import QtCore, QtGui, uic
 #from PyQt4 import QMainWindow, QApplication # Py
 
 #import time
@@ -473,41 +473,6 @@ if __name__ == '__main__':
     # - Curvature window size
     # - Xn length
     # - Above Xn parameters    
-    
-
-#    #=============================================================================================== 
-#    #                             BEGIN BULK PROCESSING LOOP
-#    #===============================================================================================    
-#    
-#    ## << FOR BULK PROCESSING >>
-#    lst_paths = glob.glob(r"B:\Terrain\DelawareRiverBasin\DEMs_3m\bulk_processing\*")
-#    
-#    for i, path in enumerate(lst_paths):
-#        
-#        if i <= 2: continue
-#        print('Processing:  ' + path)
-#        
-#        start_time_i = timeit.default_timer()
-#   
-#        try:
-#            str_dem_path = glob.glob(path + '/*dem*.tif')[0]
-#            str_hand_path = glob.glob(path + '/*hand*.tif')[0]
-#            str_net_path = glob.glob(path + '/*net*.shp')[0]    
-#            str_sheds_path = glob.glob(path + '/*w_diss_physio*.shp')[0]
-#        except:
-#            pass # depending on what's being run, it might not matter if a file doesn't exist
-#        
-#        path_to_dem, dem_filename = os.path.split(str_dem_path)
-#        csv_filename = dem_filename[:-8] + '.csv'
-#        str_csv_path = path_to_dem + '\\' + csv_filename
-#        
-#        # Output layers...
-#        str_xns_path = path_to_dem + '\\' + dem_filename[:-8] + '_xns.shp'
-#        str_bankpts_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpts.shp'
-#        str_bankpixels_path = path_to_dem + '\\' + dem_filename[:-8] + '_bankpixels.tif'
-#        
-#        # << GET CELL SIZE >>
-#        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 
     #=============================================================================================== 
     #                             BEGIN BULK PROCESSING LOOP
