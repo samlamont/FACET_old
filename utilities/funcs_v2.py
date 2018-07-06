@@ -1011,7 +1011,7 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
     rng=25 # maximum height NOTE:  What should this be?? (25 is the NFIE setting)
     arr_slices = np.arange(interval, rng, interval)  
     
-    roughness = 0.05 # Hardcode for now (units of meters)
+    roughness = 0.05 # Manning's n. Hardcode for now (units of meters)
     
 #    arr_inds = np.arange(0, len(arr_slices)-1)
 
