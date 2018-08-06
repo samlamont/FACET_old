@@ -95,6 +95,7 @@ if __name__ == '__main__':
     #===============================================================================================    
     
     ## << FOR BULK PROCESSING >>
+    ## Specify path to root:
     lst_paths = glob.glob(r"D:\facet\SampleStructure\*")
     lst_paths.sort() # for testing
     
@@ -118,7 +119,7 @@ if __name__ == '__main__':
             path_to_dem, dem_filename = os.path.split(str_dem_path)
             str_nhdhr_huc10 = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'            
             
-#            ## Reproject the nhdhr lines to same as DEM:
+#            ## Reproject the nhdhr lines to same as DEM? -- not needed:
 #            dst_crs='+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs '
             dst_crs='+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs'
 #            str_dem_aea_path = str_dem_path[:-4] + 'aea.tif'
@@ -130,7 +131,7 @@ if __name__ == '__main__':
             ## Call preprocessing function: 
             funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
             
-            sys.exit()
+#            sys.exit() # for testing
         
 #    ## DRB file structure:
 #    for i, path in enumerate(lst_paths):
