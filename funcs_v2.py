@@ -6,9 +6,9 @@ Created on Wed Dec  7 14:51:45 2016
 """
 #import pprint # neat!
 
-import math
+#import math
 import subprocess
-import timeit
+#import timeit
 import numpy as np
 from numpy import asarray
 
@@ -24,6 +24,7 @@ from math import isinf, sqrt
 import rasterio
 import rasterio.mask
 from rasterio.warp import transform
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rasterio.features import shapes
 import rasterio.features
 
@@ -37,6 +38,7 @@ import rasterio.features
 
 #from affine import Affine
 import pandas as pd
+#import geopandas as gpd
 #from scipy import ndimage
 #from shapely.geometry import Point, 
 from shapely.geometry import shape, mapping, LineString, MultiLineString, Point, MultiPoint
@@ -150,6 +152,60 @@ def get_cell_size(str_grid_path):
         cs_x, cs_y = ds_grid.res    
         
     return cs_x
+
+# ==========================================================================
+#   Reproject a grid layer using rasterio 
+# ==========================================================================    
+def define_grid_projection(str_source_grid, dst_crs, dst_file):
+    
+    print('Defining grid projection...')
+    with rasterio.open(str_source_grid, 'r') as src:
+        kwargs = src.meta.copy()
+        kwargs.update({
+            'crs': dst_crs,
+        })
+        arr_src=src.read(1)
+        
+    with rasterio.open(dst_file, 'w', **kwargs) as dst:           
+        dst.write(arr_src, indexes=1)
+
+
+# ==========================================================================
+#   Reproject a grid layer using rasterio 
+# ==========================================================================    
+def reproject_grid_layer(str_source_grid, dst_crs, dst_file):
+    
+    print('Reprojecting grid layer...')
+    with rasterio.open(str_source_grid) as src:
+        transform, width, height = calculate_default_transform(
+            src.crs, dst_crs, src.width, src.height, *src.bounds)
+        kwargs = src.meta.copy()
+        kwargs.update({
+            'crs': dst_crs,
+            'transform': transform,
+            'width': width,
+            'height': height
+        })
+            
+        with rasterio.open(dst_file, 'w', **kwargs) as dst:
+            for i in range(1, src.count + 1):
+                reproject(
+                    source=rasterio.band(src, i),
+                    destination=rasterio.band(dst, i),
+                    src_transform=src.transform,
+                    src_crs=src.crs,
+                    dst_transform=transform,
+                    dst_crs=dst_crs,
+                    resampling=Resampling.nearest)
+
+# ==========================================================================
+#   Reproject a vector layer using geopandas 
+# ==========================================================================
+def reproject_vector_layer(str_path_to_file, str_target_proj4):
+    
+    gdf = gpd.read_file(str_path_to_file) 
+    gdf = gdf.to_crs(str_target_proj4)
+    
     
 # ==========================================================================
 #   For dissolving line features    
@@ -235,7 +291,7 @@ def taudem_gagewatershed(str_pts_path, str_d8fdr_path):
 # ==========================================================================
 #   For clipping features  
 # ==========================================================================         
-def clip_features(str_lines_path, output_filename, str_dem_path):
+def clip_features_using_grid(str_lines_path, output_filename, str_dem_path):
     print('Clipping streamlines to site DEM...')
 #    # Build the output file name...
 #    path_to_dem, dem_filename = os.path.split(str_dem_path)
@@ -464,7 +520,7 @@ def run_rust_whiteboxtool(tool_name, args, exe_path, exe_name, wd, callback = de
 #   1. Breaching and filling
 #   2. TauDEM functions
 # ===============================================================================        
-def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_path, str_whitebox_path, run_whitebox, run_wg, run_taudem):
+def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, str_taudem_path, str_whitebox_path, run_whitebox, run_wg, run_taudem):
     try:
         
         # Split DEM path and filename...  # NOT OS INDEPENDENT??
@@ -478,11 +534,14 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
         dem_filename_tif = dem_filename[:-4]+'.tif'
         breach_filename_dep = dem_filename[:-4]+'_breach.dep'
         breach_filename_tif = dem_filename[:-4]+'_breach.tif'
+        breach_filepath_tif = os.path.join(path_to_dem + '/' + breach_filename_tif)
+        breach_filepath_tif_proj = breach_filepath_tif[:-4] + '_proj.tif'
         
         str_dem_path_tif = path_to_dem + '\\' + dem_filename[:-4]+'.tif'
         
+        
 #        fel = path_to_dem + '\\' + dem_filename[:-4]+'_breach.tif'
-        fel_breach = os.path.join(path_to_dem + '/' + breach_filename_tif)
+        
         p = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_p.tif')
         sd8 = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_sd8.tif')
         
@@ -521,13 +580,12 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
         # =================== << Whitebox Functions >> =====================
         if run_whitebox:
 
-            print('Whitebox Path:  ' + 'r' + '"' + str_whitebox_path + '"')
-
+            print('Whitebox .exe path:  ' + 'r' + '"' + str_whitebox_path + '"')
             str_whitebox_dir, str_whitebox_exe = os.path.split(str_whitebox_path) 
         
-            # << Run the BreachDepressions tool, specifying the arguments >>
+            ## << Run the BreachDepressions tool, specifying the arguments >>
             name = "BreachDepressions"        
-            args = [dem_filename, breach_filename_dep, '-1', '-1', 'True', 'True'] # GoSpatial verion. NOTE:  Make these last four variables accessible to user?
+            args = [dem_filename_tif, breach_filename_dep, '-1', '-1', 'True', 'True'] # GoSpatial verion. NOTE:  Make these last four variables accessible to user?
 #            args = ['--dem='+dem_filename, '-o='+breach_filename_dep] # Rust version
             
             ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
@@ -535,13 +593,23 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
             if ret != 0:
                 print("ERROR: return value={}".format(ret)) 
                 
-#             << Convert .dep to .tif here? >>  NOTE:  Only for DRB hack when using .dep files
+            ##  << Convert .dep to .tif here? >>  NOTE:  Only for DRB hack when using .dep files
             name = "WhiteBox2GeoTiff"
             args = [breach_filename_dep, breach_filename_tif] 
             
             ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
             if ret != 0:
-                print("ERROR: return value={}".format(ret))   
+                print("ERROR: return value={}".format(ret))  
+            
+            ## The converted TIFF file is saved without a crs, so save a projected version:                        
+            define_grid_projection(breach_filepath_tif, dst_crs, breach_filepath_tif_proj)
+            
+            ## Remove native Whitebox files and unprojected tif:
+            dep_path=path_to_dem + '\\' + breach_filename_dep
+            tas_path=path_to_dem + '\\' + breach_filename_dep[:-3]+'tas'
+            os.remove(dep_path)
+            os.remove(tas_path) 
+            os.remove(breach_filepath_tif)
                 
 #            # Rust version...
 #            name = "ConvertRasterFormat"
@@ -561,17 +629,12 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #            args = ['--input='+dem_filename, '-o='+dem_filename_tif]
 #            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)                
         
-        # TEST.  NOTE: Need to update spatial reference on .tifs here!
-#        with rasterio.open(path_to_dem + '\\' + breach_filename_tif, 'r') as dem_tif: # , crs='EPSG:26918'
-#            print(dem_tif.crs)
-#            pass
-#            
         if run_wg:
-            create_wg_from_streamlines(str_streamlines_path, str_dem_path_tif, str_danglepts_path)            
+            create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts_path)            
             
         if run_taudem:
 
-            # Testing...
+             # Testing...
 #            mpipath = 'r' +  '"' + mpipath + '"'
 #            fel = 'r' +  '"' + fel + '"'
             
@@ -596,14 +659,13 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #                if isinstance(line, bytes):	   # true in Python 3
 #                    line = line.decode()
 #                message = message + line        
-#            print(message)                
-            
+#            print(message)                            
  
             # ==============  << 2. D8 FDR with TauDEM >> ================        
 #            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
 #                  ' -sd8 ' + '"' + sd8 + '"'
                   
-            cmd = 'mpiexec' + ' -n ' + inputProc + ' D8FlowDir -fel ' + '"' + dem_filename + '"' + ' -p ' + '"' + p + '"' + \
+            cmd = 'mpiexec' + ' -n ' + inputProc + ' D8FlowDir -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -p ' + '"' + p + '"' + \
                   ' -sd8 ' + '"' + sd8 + '"'                  
                           
             # Submit command to operating system
@@ -657,7 +719,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #            print(message)            
 #            
 #            # ============= << 4 StreamReachandWatershed with TauDEM >> ================      
-#            cmd = 'mpiexec -n ' + inputProc + ' StreamNet -fel ' + '"' + fel_pitremove + '"' + ' -p ' + '"' + p + '"' + \
+#            cmd = 'mpiexec -n ' + inputProc + ' StreamNet -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -p ' + '"' + p + '"' + \
 #                  ' -ad8 ' + '"' + ad8_no_wg + '"' + ' -src ' + '"' + ad8_wg + '"' + ' -ord ' + '"' + ord_g + '"' + ' -tree ' + \
 #                  '"' + tree + '"' + ' -coord ' + '"' + coord + '"' + ' -net ' + '"' + net + '"' + ' -w ' + '"' + w + \
 #                  '"'        
@@ -687,7 +749,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, str_mpi_path, str_taudem_
 #                
 #            # ============= << 5. Dinf with TauDEM >> =============                
 #            print('Running TauDEM Dinfinity...')        
-#            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + fel_pitremove + '"' + ' -ang ' + '"' + ang + '"' + \
+#            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -ang ' + '"' + ang + '"' + \
 #                  ' -slp ' + '"' + slp + '"'
 #            
 #            # Submit command to operating system
