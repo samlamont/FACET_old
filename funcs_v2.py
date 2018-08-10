@@ -38,7 +38,7 @@ import rasterio.features
 
 #from affine import Affine
 import pandas as pd
-#import geopandas as gpd
+import geopandas as gpd
 #from scipy import ndimage
 #from shapely.geometry import Point, 
 from shapely.geometry import shape, mapping, LineString, MultiLineString, Point, MultiPoint
@@ -206,6 +206,10 @@ def reproject_vector_layer(str_path_to_file, str_target_proj4):
     gdf = gpd.read_file(str_path_to_file) 
     gdf = gdf.to_crs(str_target_proj4)
     
+    str_out_path = str_path_to_file[:-4] + '_proj.shp'
+    gdf.to_file(str_out_path)
+    
+    return str_out_path
     
 # ==========================================================================
 #   For dissolving line features    
@@ -1181,6 +1185,16 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
     df_props.to_csv(r"D:\hand\nfie\020700\difficult_run\dr_hydroprops_test.csv")
     
     return
+
+def fp_width_2d_xns(df_coords, str_fim_path):
+    
+    
+    print('hey!')
+    
+    
+    
+    return
+
 # ===============================================================================
 #  Delineate a FIM from the HAND grid using depth at each polygon (eg, catchment)
 #
