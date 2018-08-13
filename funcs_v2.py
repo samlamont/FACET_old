@@ -202,6 +202,7 @@ def reproject_grid_layer(str_source_grid, dst_crs, dst_file):
 #   Reproject a vector layer using geopandas 
 # ==========================================================================
 def reproject_vector_layer(str_path_to_file, str_target_proj4):
+    print('Reprojecting vector layer...')
     
     gdf = gpd.read_file(str_path_to_file) 
     gdf = gdf.to_crs(str_target_proj4)

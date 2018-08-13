@@ -88,9 +88,9 @@ if __name__ == '__main__':
     str_whitebox_path= r"C:\whitebox_gat\gospatial\go-spatial_win_amd64.exe" # Go version
   
     ## Flags specifying what to run:
-    run_whitebox = True  # Run Whitebox-BreachDepressions?
+    run_whitebox = False  # Run Whitebox-BreachDepressions?
     run_wg = True       # Run create weight grid by finding start points from a given streamlines layer?
-    run_taudem = True   # Run TauDEM functions?    
+    run_taudem = False   # Run TauDEM functions?    
 
     #=============================================================================================== 
     #                             BEGIN BULK PROCESSING LOOP
@@ -104,42 +104,42 @@ if __name__ == '__main__':
     #===============================================================================================   
     ## Chesapeake file structure:
     #===============================================================================================   
-#    for i, path in enumerate(lst_paths):
-#        
-#        str_nhdhr_huc4 = glob.glob(path + '\*.shp')[0]
-#        
-#        ## Reproject the nhdhr lines to same as DEM:
-#        dst_crs='+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs'      
-#        
-#        ## Re-project the NHD to match the DEM:
-#        str_nhdhr_huc4_proj = funcs_v2.reproject_vector_layer(str_nhdhr_huc4, dst_crs)        
-#        
-#        for root, dirs, files in os.walk(path):
-#            try:
-#                str_huc = fnmatch.filter(files, '*.shp')[0]
-#                str_dem = fnmatch.filter(files, '*.tif')[0]
-#            except:
-#                continue
-#            
-#            ## Get the DEM and HUC10 poly mask file paths:
-#            str_dem_path = root + '\\' + str_dem
-#            str_hucmask_path = root + '\\' + str_huc[1:]
-#            
-#            ## Assign a name for the clipped NHD-HR HUC10 file:
-#            path_to_dem, dem_filename = os.path.split(str_dem_path)
-#            str_nhdhr_huc10 = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'            
-#            
-#            ## Clip the HUC4 nhdhr streamlines layer to the HUC10:  
-##            str_nhdhr_huc4_proj=r"D:\facet\SampleStructure\0205\0205_proj.shp"
-#            funcs_v2.clip_features_using_grid(str_nhdhr_huc4_proj, str_nhdhr_huc10, str_dem_path) 
-#            
-##            break
-#            
-#            ## Call preprocessing function: 
-##            funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
-#            
-##            sys.exit() # for testing
-#            
+    for i, path in enumerate(lst_paths):
+        
+        str_nhdhr_huc4 = glob.glob(path + '\*.shp')[0]
+        
+        ## Reproject the nhdhr lines to same as DEM:
+        dst_crs='+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs'      
+        
+        ## Re-project the NHD to match the DEM:
+        str_nhdhr_huc4_proj = funcs_v2.reproject_vector_layer(str_nhdhr_huc4, dst_crs)        
+        
+        for root, dirs, files in os.walk(path):
+            try:
+                str_huc = fnmatch.filter(files, '*.shp')[0]
+                str_dem = fnmatch.filter(files, '*.tif')[0]
+            except:
+                continue
+            
+            ## Get the DEM and HUC10 poly mask file paths:
+            str_dem_path = root + '\\' + str_dem
+            str_hucmask_path = root + '\\' + str_huc[1:]
+            
+            ## Assign a name for the clipped NHD-HR HUC10 file:
+            path_to_dem, dem_filename = os.path.split(str_dem_path)
+            str_nhdhr_huc10 = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'            
+            
+            ## Clip the HUC4 nhdhr streamlines layer to the HUC10:  
+#            str_nhdhr_huc4_proj=r"D:\facet\SampleStructure\0205\0205_proj.shp"
+            funcs_v2.clip_features_using_grid(str_nhdhr_huc4_proj, str_nhdhr_huc10, str_dem_path) 
+            
+#            break
+            
+            ## Call preprocessing function: 
+            funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
+            
+#            sys.exit() # for testing
+            
     #===============================================================================================           
     ## DRB file structure:
     #===============================================================================================   
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     #===============================================================================================    
     
 #    # << GET CELL SIZE >>
-    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
+#    cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?
 #    
 #    # << DEM PRE-PROCESSING using TauDEM and Whitebox-GoSpatial >>              
 #    # (1) If necessary, clip original streamlines layer (NHD hi-res 4 digit HUC to DEM of interest)...     
@@ -228,7 +228,7 @@ if __name__ == '__main__':
      
 ##    # << BUILD STREAMLINES COORDINATES >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
-    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
+#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
 #    df_coords.to_csv(r"D:\hand\nfie\020700\df_coords_020700.csv") # save to a csv for testing (faster to read pre-calculated coords)
     
 #    print('NOTE:  Reading pre-calculated csv file...')
@@ -243,7 +243,7 @@ if __name__ == '__main__':
 #    # Channel:
 #    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
 #    # FP:
-    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_fpxns_path), True, int(30))  # For FP width testing
+#    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_fpxns_path), True, int(30))  # For FP width testing
 #
 ##    # Interpolate elevation along Xns:
 #    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
