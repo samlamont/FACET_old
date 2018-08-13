@@ -1352,6 +1352,23 @@ def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
     return bank_height, chan_width, bank_ang
 
 # ===============================================================================
+#  Calculates floodplain metrics from 2-D cross sections
+# =============================================================================== 
+def fp_metrics_from_2D_xns(str_xns_path, str_fim_path):
+    
+    ## Open the floodplain Xn layer:
+    with fiona.open(str(str_xns_path), 'r') as xns:
+        
+        for xn in xns:
+            
+            
+            print('hey')
+            ## Create 2-D buffers:
+    
+    
+            ## Analyze FIM, DEM and/or HAND via buffers:
+
+# ===============================================================================
 #  Calculates channel width and sinuosity using parallel offset buffering
 # ===============================================================================    
 def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff):
@@ -1463,8 +1480,6 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                             tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
                             lst_tally.append(tpl_out)                    
                             df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
-
-
                         
                         # Calculate weighted average                     
                         # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
@@ -1487,7 +1502,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                             print('Right width set to max. Exception: {} \n'.format(e))
                        
                         # Write to the output shapefile here...
-                        output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity}, 'geometry':mapping(ls)})                            
+                        output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity}, 'geometry':mapping(ls)})                                                    
                                     
 #                    if j > 50: break
     return
@@ -2369,7 +2384,7 @@ def read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path):
 # ===================================================================================
 #  Build the Xns for all reaches and write to shapefile
 # ===================================================================================
-def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xngap, p_fitlength, p_xnlength):
+def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xngap):
     """
         Builds Xns from x-y pairs representing shapely interpolations along a reach
 
@@ -2427,6 +2442,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
 #                # ======================================    
                 
             # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
+            ## Settings for stream channel cross-sections:
             if not(bool_isvalley):
                 
 #                if i_order != 6: continue
@@ -2455,6 +2471,34 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
 #                elif i_order == 8:
 #                    p_xnlength=150  
 #                    p_fitlength = 24
+                    
+            ## Settings for floodplain cross-sections:
+            elif bool_isvalley:
+
+                if i_order == 1:
+                    p_xnlength=20
+                    p_fitlength = 3 
+                elif i_order == 2:
+                    p_xnlength=23
+                    p_fitlength = 6
+                elif i_order == 3:
+                    p_xnlength=40
+                    p_fitlength = 9
+                elif i_order == 4:
+                    p_xnlength=60 
+                    p_fitlength = 12
+                elif i_order == 5:
+                    p_xnlength=80  
+                    p_fitlength = 15
+                elif i_order >= 6:
+                    p_xnlength=250 
+                    p_fitlength = 20
+#                elif i_order == 7:
+#                    p_xnlength=130 
+#                    p_fitlength = 21
+#                elif i_order == 8:
+#                    p_xnlength=150  
+#                    p_fitlength = 24                
     
             reach_len = len(df_linkno['x'])
         
