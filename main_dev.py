@@ -124,18 +124,25 @@ if __name__ == '__main__':
             
             ## Assign a name for the clipped NHD-HR HUC10 file:
             path_to_dem, dem_filename = os.path.split(str_dem_path)
-            str_nhdhr_huc10 = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'            
-            
+            str_nhdhr_huc10 = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'
+
+            # Project all dem rasters
+            name, ext = str_dem.split('.')
+            dst_file = root + '\\' + name + '_proj.' + ext
+            funcs_v2.reproject_grid_layer(str_dem_path, dst_crs, dst_file, resolution=(3.0, 3.0))
+
+            # new dem path
+            str_dem_path = dst_file
+
             ## Clip the HUC4 nhdhr streamlines layer to the HUC10:  
-            str_nhdhr_huc4_proj=r"D:\facet\SampleStructure\0205\0205_proj.shp"
+            # str_nhdhr_huc4_proj= r"D:\facet\SampleStructure\0205\0205_proj.shp"
             funcs_v2.clip_features_using_grid(str_nhdhr_huc4_proj, str_nhdhr_huc10, str_dem_path) 
             
-            break
+            # break
             
             ## Call preprocessing function: 
-#            funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
-            
-#            sys.exit() # for testing
+            funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
+#          sys.exit() # for testing
         
 #    ## DRB file structure:
 #    for i, path in enumerate(lst_paths):
