@@ -96,7 +96,7 @@ if __name__ == '__main__':
     
     ## << FOR BULK PROCESSING >>
     ## Specify path to root:
-    lst_paths = glob.glob(r"D:\facet\SampleStructure\*")
+    lst_paths = glob.glob(r"F:\facet\CFN_CB_HUC10\*")
     lst_paths.sort() # for testing
     
     ## Chesapeake file structure:
