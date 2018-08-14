@@ -83,7 +83,8 @@ if __name__ == '__main__':
     ## Preprocessing paths and parameters:
     str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
     str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
-    str_whitebox_path= r"C:\whitebox_gat\gospatial\go-spatial_win_amd64.exe" # Go version
+    # str_whitebox_path= r"C:\whitebox_gat\gospatial\go-spatial_win_amd64.exe" # Go version
+    str_whitebox_path= r"D:\git_projects\FACET_misc\white_box_go_spatial\go-spatial_win_amd64.exe" # Go version
   
     ## Flags specifying what to run:
     run_whitebox = True  # Run Whitebox-BreachDepressions?
