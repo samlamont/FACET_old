@@ -11,6 +11,7 @@ import timeit
 import os
 import fnmatch
 import sys
+import pandas as pd
 
 #from functools import partial
 #import multiprocessing
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     str_slp_path = r"D:\drb\02040205\02040205_breach_dem_sd8.tif"
     
     ## Vector streamlines:
-    str_net_in_path = r"D:\hand\nfie\020700\020700-flows.shp"
+    str_net_path = r"D:\hand\nfie\020700\020700-flows.shp"
       
     ## Bank pixels:   
 #    str_bankpixels_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\bankpixels_PO.tif'
@@ -44,7 +45,8 @@ if __name__ == '__main__':
 #    str_floodplain_path = r'D:\CFN_data\DEM_Files\020502061102_ChillisquaqueRiver\DEM_breach_hand_slice2.3.tif'    
     
     ## Cross sections:    
-    str_xns_path = r"D:\hand\nfie\020700\020700_xns_test.shp"
+    str_chxns_path = r"D:\hand\nfie\020700\usgs\020700_chxns_test.shp"
+    str_fpxns_path = r"D:\hand\nfie\020700\usgs\020700_fpxns_test.shp"
 
     ## HAND:
     str_hand_path = r"D:\drb\02040205\02040205_breach_hand.tif"
@@ -69,11 +71,11 @@ if __name__ == '__main__':
     
     ## Cross section method:
     parm_ivert = 0.2 # 0.2 default
-    XnPtDist = 3 # 3 is default
+    XnPtDist = 3 # 3 is default  Step along Xn length for interpolating elevation
     parm_ratiothresh = 1.5 # 1.5 default
     parm_slpthresh = 0.03 # 0.03 default
-    p_buffxnlen = 30 # meters (if UTM) ?? (cross section length)
-    p_xngap = 3 # 3 default  (spacing between cross sections)
+#    p_buffxnlen = 30 # meters (if UTM) ?? (cross section length) Now defined in write_xns_shp
+#    p_xngap = 3 # 3 default  (spacing between cross sections)
     
     ## Width from curvature via buffering method:
     use_wavelet_curvature_method = False
@@ -87,9 +89,9 @@ if __name__ == '__main__':
     str_whitebox_path= r"D:\git_projects\FACET_misc\white_box_go_spatial\go-spatial_win_amd64.exe" # Go version
   
     ## Flags specifying what to run:
-    run_whitebox = True  # Run Whitebox-BreachDepressions?
+    run_whitebox = False  # Run Whitebox-BreachDepressions?
     run_wg = True       # Run create weight grid by finding start points from a given streamlines layer?
-    run_taudem = True   # Run TauDEM functions?    
+    run_taudem = False   # Run TauDEM functions?    
 
     #=============================================================================================== 
     #                             BEGIN BULK PROCESSING LOOP
@@ -100,7 +102,9 @@ if __name__ == '__main__':
     lst_paths = glob.glob(r"F:\facet\CFN_CB_HUC10\*")
     lst_paths.sort() # for testing
     
+    #===============================================================================================   
     ## Chesapeake file structure:
+    #===============================================================================================   
     for i, path in enumerate(lst_paths):
         
         str_nhdhr_huc4 = glob.glob(path + '\*.shp')[0]
@@ -143,8 +147,10 @@ if __name__ == '__main__':
             ## Call preprocessing function: 
             funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
 #          sys.exit() # for testing
-        
-#    ## DRB file structure:
+            
+    #===============================================================================================           
+    ## DRB file structure:
+    #===============================================================================================   
 #    for i, path in enumerate(lst_paths):
 #         
 #        print('Processing:  ' + path)
@@ -165,39 +171,43 @@ if __name__ == '__main__':
 #        str_csv_path = path_to_dem + '/' + csv_filename
 #        
 #        # Output layers...
-#        str_xns_path = path_to_dem + '/' + dem_filename[:-8] + '_xns.shp'
+#        str_chxns_path = path_to_dem + '/' + dem_filename[:-8] + '_chxns.shp'
+#        str_fpxns_path = path_to_dem + '/' + dem_filename[:-8] + '_fpxns.shp'
 #        str_bankpts_path = path_to_dem + '/' + dem_filename[:-8] + '_bankpts.shp'
 #        str_bankpixels_path = path_to_dem + '/' + dem_filename[:-8] + '_bankpixels.tif'
 #        
-#        #      Call preprocessing function: 
+#        # Call preprocessing function: 
 #        funcs_v2.preprocess_dem(str_dem_path, str_net_in_path, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)         
-        
+#        
 #        # << GET CELL SIZE >>
 #        cell_size = int(funcs_v2.get_cell_size(str_dem_path)) # range functions need int?        
 #
 #        # << BUILD STREAMLINES COORDINATES >>
-##        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
+#        df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!        
 ##        df_coords.to_csv(str_csv_path)
-#        df_coords = pd.read_csv(str_csv_path, )    
-#        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N     
-
+##        df_coords = pd.read_csv(str_csv_path, )    
+##        streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N     
+#
 #        # ============================= << CROSS SECTION ANALYSES >> =====================================
-##        # << CREATE Xn SHAPEFILES >>
-##        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(p_xngap), int(3), float(30))     
-##
-##        # << INTERPOLATE ELEVATION ALONG Xns >>
-##        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
-##        
-##        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
-##        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
+#        # << CREATE Xn SHAPEFILES >>
+#        ## Channel:
+#        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_chxns_path), False, int(3))             
+#        ## Floodplain:
+##        funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_fpxns_path), True, int(30))     
+#
+#        # << INTERPOLATE ELEVATION ALONG Xns >>
+#        df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
+#        
+#        # Calculate channel metrics and write bank point shapefile...# NOTE:  Use raw DEM here??        
+#        funcs_v2.chanmetrics_bankpts(df_xn_elev, str_xns_path, str_dem_path, str_bankpts_path, parm_ivert, XnPtDist, parm_ratiothresh, parm_slpthresh)
 #        
 #        # ========================== << BANK PIXELS AND WIDTH FROM CURVATURE >> ====================================
 #        funcs_v2.bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_path, cell_size, use_wavelet_curvature_method) # YES!        
 #
 #        funcs_v2.channel_width_from_bank_pixels(df_coords, str_net_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff)        
-       
-  
-        # ============================= << DELINEATE FIM >> =====================================
+#       
+#  
+#        # ============================= << DELINEATE FIM >> =====================================
 #        funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid)
 #        
 #        
@@ -226,13 +236,14 @@ if __name__ == '__main__':
      
 ##    # << BUILD STREAMLINES COORDINATES >>
 ##    # Build reach coords and get crs from a pre-existing streamline shapefile...
-#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_in_path, cell_size, str_reachid, str_orderid) # YES!
+#    df_coords, streamlines_crs = funcs_v2.get_stream_coords_from_features(str_net_path, cell_size, str_reachid, str_orderid) # YES!
 #    df_coords.to_csv(r"D:\hand\nfie\020700\df_coords_020700.csv") # save to a csv for testing (faster to read pre-calculated coords)
     
 #    print('NOTE:  Reading pre-calculated csv file...')
 #    df_coords = pd.read_csv('df_coords_DifficultRun.csv')
 #    df_coords = pd.read_csv('df_coords_Chillisquaque.csv', )
 #    df_coords = pd.read_csv('df_coords_020802.csv', )    
+#    df_coords = pd.read_csv(r"D:\hand\nfie\020700\df_coords_020700.csv", )
 #    streamlines_crs = {'init': u'epsg:26918'} # NAD83, UTM18N    
     
 #   # << BANK POINTS FROM CROSS-SECTIONS >>
@@ -240,7 +251,7 @@ if __name__ == '__main__':
 #    # Channel:
 #    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), False, int(3), int(3), float(30))     
 #    # FP:
-##    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_xns_path), True, int(30), int(30), float(100))  # For FP width testing
+#    funcs_v2.write_xns_shp(df_coords, streamlines_crs, str(str_fpxns_path), True, int(30))  # For FP width testing
 #
 ##    # Interpolate elevation along Xns:
 #    df_xn_elev = funcs_v2.read_xns_shp_and_get_dem_window(str_xns_path, str_dem_path)
