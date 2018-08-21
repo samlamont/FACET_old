@@ -50,6 +50,7 @@ from shapely.ops import split
 
 import fiona
 from fiona import collection
+from fiona.crs import from_epsg
 
 #import gospatial as gs
 
@@ -328,8 +329,7 @@ def clip_features_using_grid(str_lines_path, output_filename, str_dem_path):
         
         with fiona.open(output_filename, 'w', 'ESRI Shapefile', lines_schema, lines_crs) as dst:
         
-            for line in subset:
-    
+            for line in subset:  
                 if shape(line['geometry']).within(poly_shp):
                     dst.write(line)
 
@@ -824,99 +824,92 @@ def get_feature_count(str_shp_path):
 #  potentially subdividing using Xn's
 #  NOTE: Make this a generic metric calculator by segment?  (ie., sinuosity, etc)
 # =================================================================================
-def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, p_fpxnlen, str_hand_path, parm_ivert):
+def channel_and_fp_2Dxn_analysis(df_coords, str_streamlines_path, str_bankpixels_path, str_hand_path, str_fim_path, str_reachid, cell_size, i_step, max_buff, p_fpxnlen):
     
-    print('Channel width from bank pixels -- segmented reaches...')
+    print('Channel and floodplain metrics from 2D cross sections along reach segments...')    
 
-#    j=0   
+    j=0   
 #    progBar = self.progressBar
 #    progBar.setVisible(True) 
-
-    # For Testing...
-    bank_height_hand = -9999.
-    chan_width_hand = -9999.
     
-    reach_buff_dist = 30 # Half the total buffer width for calculating HAND-based reach geometry
-    fp_height = 2.0 # How to get this?  By reach?
-#    p_fitlength=30  # For FP Xn's
+    lst_geom=[] # TESTING.  For saving 2D Xn buffer polygons
+
+    # Successive buffer-mask operations to count bank pixels at certain intervals
+    lst_buff=range(cell_size,max_buff,cell_size)    
     
     # Create the filename and path for the output file... # NOT OS INDEPENDENT??
     head, tail = os.path.split(str_streamlines_path)    
-    str_outname = tail[:-4] + '_ch_fp_width_po_hand.shp'
+    str_outname = tail[:-4] + '_ch_fp_width.shp'
     str_outpath = head + '/' + str_outname 
     
     gp_coords = df_coords.groupby('linkno')
     
-    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
-    schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float', 'dist_sl':'float', 'dist':'float', 'sinuosity':'float', 'fp_width':'float', 'bh_hand':'float','cw_hand':'float','ba_hand':'float'}}
-    
-    # Access the floodplain grid...
-    with rasterio.open(str(str_hand_path)) as ds_hand:
-        
-        out_meta = ds_hand.meta.copy()
-        arr_out_pixels = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])                                  
-        
-        # Access the bank pixel layer...
-        with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
-            
-            # Access the streamlines layer...
-            with fiona.open(np.str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
-           
-    #            progBar.setRange(0, len(streamlines)) 
-                
-                # Get the crs...
-                streamlines_crs = streamlines.crs                
-                
-#                # For writing out the buffers...
-#                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test_ls.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
-                    
-                # Open another file to write the width...
-                with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
-                    
-                    for i_linkno, df_linkno in gp_coords:
-                        
-    #                    progBar.setValue(j)
-    #                    j+=1                    
-                
-                        i_linkno = int(i_linkno)
-#                        max_indx = len(df_linkno.index) - 1
-                        
-#                            if i_linkno != 116:
-#                                continue
-                        
-                        print('linkno:  {}'.format(i_linkno))
-              
-                        # << Analysis by reach segments >>
-                        # Set up index array to split up df_linkno into segments (these dictate the reach segment length)...
-                        # NOTE:  Reach might not be long enough to break up
-                        i_step=30 # is this same as fit_length defined above??
-                        arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
-                        lst_dfsegs = np.split(df_linkno, arr_ind)                        
-                        
-                        for i_seg, df_seg in enumerate(lst_dfsegs): # looping over each reach segment
-                            
-                            arr_x = df_seg.x.values
-                            arr_y = df_seg.y.values
+    ## Schema for the output properties file:
+    schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float',
+                                                              'dist_sl':'float', 'dist':'float', 'sinuosity':'float','fp_width':'float','fp_range':'float'}}                                  
 
-                            try:
-                                # Calculate straight line distance...
-                                dist_sl = np.sqrt((arr_x[0] - arr_x[-1])**2 + (arr_y[0] - arr_y[-1])**2)                     
-                            except:
-                                print('Error calculated straight line distance')
-                                dist_sl = 0.
-                            
-                            try:
-                                # Create a line segment from endpts in df_seg...
-                                ls = LineString(zip(arr_x, arr_y))
+    ## Access the hand grid:
+    with rasterio.open(str_hand_path, 'r') as ds_hand:                        
+    
+        ## Access the FIM:
+        with rasterio.open(str_fim_path, 'r') as ds_fim:
+    
+            # Access the bank pixel layer:
+            with rasterio.open(str(str_bankpixels_path)) as ds_bankpixels:    
+                
+                # Access the streamlines layer...
+                with fiona.open(str(str_streamlines_path), 'r') as streamlines: # NOTE: For some reason you have to explicitly convert the variable to a string (is it unicode?)
+              
+        #            progBar.setRange(0, len(streamlines)) 
+                    
+                    # Get the crs...
+                    streamlines_crs = streamlines.crs                
                                 
+                    # Open another file to write the output props:
+                    with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
+                        
+                        for i_linkno, df_linkno in gp_coords:
+                            
+        #                    progBar.setValue(j)
+                            j+=1                    
+                    
+                            i_linkno = int(i_linkno)
+        #                        max_indx = len(df_linkno.index) - 1
+                            
+        #                    if i_linkno != 1368: continue                
+                            
+                            print('linkno:  {}'.format(i_linkno))
+                  
+                            # << Analysis by reach segments >>
+                            # Set up index array to split up df_linkno into segments (these dictate the reach segment length)...
+                            # NOTE:  Reach might not be long enough to break up
+                            arr_ind = np.arange(i_step, len(df_linkno.index)+1, i_step) # NOTE: Change the step for resolution?                        
+                            lst_dfsegs = np.split(df_linkno, arr_ind)                        
+                            
+                            for i_seg, df_seg in enumerate(lst_dfsegs): # looping over each reach segment
+                                
+                                arr_x = df_seg.x.values
+                                arr_y = df_seg.y.values
+        
+                                try:
+                                    # Create a line segment from endpts in df_seg...
+                                    ls = LineString(zip(arr_x, arr_y))                            
+                                except:
+                                    print('Cannot create a LineString using these points, skipping')
+                                    continue 
+                                
+                                try:
+                                    # Calculate straight line distance...
+                                    dist_sl = np.sqrt((arr_x[0] - arr_x[-1])**2 + (arr_y[0] - arr_y[-1])**2)                     
+                                except:
+                                    print('Error calculated straight line distance')
+                                    dist_sl = -9999.
+                                    
                                 dist = ls.length                                    
                                 sinuosity = dist/dist_sl # ratio of sinuous length to straight line length
                                 
                                 lst_tally=[]                            
-
-                                # Successive buffer-mask operations to count bank pixels at certain intervals
-                                lst_buff=range(cell_size,30,cell_size)
-
+        
                                 for buff_dist in lst_buff:                                                            
                                     
                                     try:
@@ -939,129 +932,63 @@ def channel_and_fp_width_bankpixels_segments_po_2Dfpxns(df_coords, str_streamlin
                                         print('Right offset error')
                                         out_rt=np.array([0])
                                         
-                                    num_pixels_left = len(out_left[out_left>0])
-                                    num_pixels_rt = len(out_rt[out_rt>0])
+                                    num_pixels_left = len(out_left[out_left>0.])
+                                    num_pixels_rt = len(out_rt[out_rt>0.])
                                     
                                     # You want the number of pixels gained by each interval...                    
                                     tpl_out = i_linkno, buff_dist, num_pixels_left, num_pixels_rt
                                     lst_tally.append(tpl_out)                    
                                     df_tally = pd.DataFrame(lst_tally, columns=['linkno','buffer','interval_left','interval_rt'])
-
-                            except:
-                                print('buffer exception pause')
-                                # There may be errors associated with the buffer geometry.  Just skip it if so?
-                                continue
-                       
-                            # Avoid division by zero                     
-    #                        if df_tally.interval.sum() == 0:
-    #                            continue                    
-                            
-                            # Calculate weighted average                     
-                            # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
-                            try:                        
+                                
+                                # Calculate weighted average                     
+                                # Only iterate over the top 3 or 2 (n_top) since distance is favored...    
                                 weighted_avg_left=0 
                                 weighted_avg_rt=0
-                                n_top=2
-                                for tpl in df_tally.nlargest(n_top, 'interval_left').iloc[0:2].itertuples():
-                                    weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))
+                                n_top=2   
+                                
+                                try:                        
+                                    for tpl in df_tally.nlargest(n_top, 'interval_left').iloc[0:2].itertuples():
+                                        weighted_avg_left += tpl.buffer*(np.float(tpl.interval_left)/np.float(df_tally.nlargest(n_top, 'interval_left').iloc[0:2].sum().interval_left))                        
+                                except Exception as e:
+                                    weighted_avg_left=max_buff
+                                    print('Left width set to max. Exception: {} \n'.format(e))
+        
+                                try:
+                                    for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
+                                        weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))                                                                                                            
+                                except Exception as e:
+                                    weighted_avg_rt=max_buff
+                                    print('Right width set to max. Exception: {} \n'.format(e))
+                                         
+                                ## Call 2D Xn channel and FP analysis here:
+                                parm_ivert=0.1
+                                fp_width, fp_range = metrics_from_2D_xns(ds_fim, ds_hand, df_seg, p_fpxnlen, dist_sl, parm_ivert)
+                            
+#                                lst_geom.append(xn_buff)
+                                
+                                # Write to the output shapefile here...
+                                output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,
+                                                            'dist':dist,'sinuosity': sinuosity,'fp_width':fp_width,'fp_range':fp_range.astype(np.float64)},'geometry':mapping(ls)})                                                    
+                                                              
+                                
+                            break
+                                
+                                    
+#                    if j > 50: break
+#    print('Saving test 2D Xn buffer layer...')                           
+#    gdf_buff=gpd.GeoDataFrame()
+#    gdf_buff['geometry']=lst_geom
+#    gdf_buff.crs = from_epsg(26918)
+#    gdf_buff.to_file(r"D:\facet\dr_working_data\dr_working_data\dr3m_2d_buffs_test.shp" )
+                            
+#    ## Save output metrics in segmented streamline file:
+#    print('Saving channel and floodplain metric stream segment layer...')                           
+#    gdf_buff=gpd.GeoDataFrame()
+#    gdf_buff['geometry']=lst_geom
+#    gdf_buff.crs = from_epsg(26918)
+#    gdf_buff.to_file(r"D:\facet\dr_working_data\dr_working_data\dr3m_2d_buffs_test.shp" )                            
     
-                                for tpl in df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].itertuples():
-                                    weighted_avg_rt += tpl.buffer*(np.float(tpl.interval_rt)/np.float(df_tally.nlargest(n_top, 'interval_rt').iloc[0:2].sum().interval_rt))
-                                                                                                                
-                            except Exception as e:
-                                weighted_avg_left=-9999.
-                                weighted_avg_rt=-9999.
-                                fp_width=-9999.
-                                print('Error calculating weighted average of buffer distance.  Maybe no bank pixels found? Exception: {} \n'.format(e))
-#                                continue                                                                                                                        
-                            
-#                            if i_seg == 33:
-#                                print('pause')                                
-                            
-                            # << CHANNEL PROPERTIES VIA HAND >>                            
-#                                midpt_indx = int(len(arr_x)/2)
-#                                                         
-#                                # midPt x and y...
-#                                midpt_x = df_seg.x.iloc[midpt_indx]
-#                                midpt_y = df_seg.y.iloc[midpt_indx]                              
-#                                
-#                                # Send it the endpts of what you to draw a perpendicular line to...
-#                                lst_xy = build_xns(list(arr_y), list(arr_x), midpt_x, midpt_y, p_fpxnlen)
-#                                
-#                                try:            
-#                                    # Turn the list of tuples into a linestring
-#                                    fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
-#                                except:
-#                                    print('Error converting Xn endpts to LineString')
-#                                    continue
-                                                                
-#                                # 2D cross section buffer...         
-#                                buff_len=dist_sl/1.85 # have of the line segment straight line distance
-#                                geom_fpls_buff = fp_ls.buffer(fp_buff_dist, cap_style=2)
-#                                buff = mapping(geom_fpls_buff)
-                            
-                            # Standard buffer on line segment...
-                            geom_ls_buff = ls.buffer(reach_buff_dist, cap_style=3)
-                            buff = mapping(geom_ls_buff)
-                            
-#                            if i_seg==5:
-#                                # Write out buffer polygon(s)...NOTE:  Could write out ind
-#                                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
-#                            buff_out.write({'properties': {'buff': 'mmmm'}, 'geometry': buff})                       
-#                                break                              
-                            
-                            # Mask the bankpts file for each feature...
-                            out_image, out_transform = rasterio.mask.mask(ds_hand, [buff], crop=True)
-                            
-                            # << Related to mapping the floodplain based on HAND height >>
-#                                # Count the number of pixels in the buffered Xn...
-#                                num_pixels = out_image[(out_image<=fp_height)&(out_image>=0.)].size
-#                                 
-#                                # Calculate area of FP pixels...
-#                                area_pixels = num_pixels*(ds_hand.res[0]**2) # get grid resolution               
-#                                
-#                                # Calculate width by stretching it along the length of the 2D Xn...
-#                                fp_width = area_pixels/(buff_len*2)       
-                            fp_width=0 # For testing purposes
-#        
-#                                # Subtract channel width from fp width...
-#                                fp_width = fp_width - (weighted_avg_left+weighted_avg_rt)
-#                                
-#                                if fp_width<0.: fp_width = 0 # don't have negatives              
-
-                            # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>                                                       
-                            bank_height_hand, chan_width_hand, bank_ang_hand = analyze_hand_poly(out_image, dist_sl, reach_buff_dist, ds_hand.res[0], parm_ivert)
-                            
-                            # Write back the in-channel pixels to a tif...                                                
-                            out_image = out_image[0]                                                        
-                            shp=np.shape(out_image)                                
-                            bounds = rasterio.transform.array_bounds(shp[0],shp[1],out_transform) # window bounds in x-y space (west, south, east, north)                                
-                            col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3]) # upper left row and column of window?                                
-                            
-                            row_min = np.int(row_min)                            
-                            col_min = np.int(col_min)
-                            row_max = np.int(row_min + shp[0])
-                            col_max = np.int(col_min + shp[1])
-                          
-                            out_image[out_image<0] = 9999. # no data values?
-#                            out_image[out_image<=bank_height_hand] = 1.
-                            out_image[out_image>bank_height_hand] = 0.
-            
-                            # Re-assing channel pixels...
-#                            arr_out_pixels[row_min:row_max, col_min:col_max] = out_image + arr_out_pixels[row_min:row_max, col_min:col_max] #bool_fp.astype(out_meta['dtype'])
-                            
-                            # Or take the average between new pixels and previous pixels...
-                            arr_out_pixels[row_min:row_max, col_min:col_max] = arr_out_pixels[row_min:row_max, col_min:col_max] + (out_image + arr_out_pixels[row_min:row_max, col_min:col_max])/2
-                            
-                            # Write to the output shapefile here...
-                            output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity,'fp_width':fp_width,'bh_hand':bank_height_hand,'cw_hand':chan_width_hand,'ba_hand':bank_ang_hand}, 'geometry':mapping(ls)})                            
-                            
-    print('Writing .tif file...')   
-    str_fp_path = r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\dr3m_test_pixels.tif'
-    with rasterio.open(str_fp_path, "w", **out_meta) as dest:
-        dest.write(arr_out_pixels, indexes=1)                              
-
-    return   
+    return
 
 # ===============================================================================
 #  Reach characteristics from HAND
@@ -1092,7 +1019,7 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
 #        nodata = ds_hand.nodata
 #        out_meta = ds_hand.meta.copy()
 #        res = ds_hand.res[0]  # CAREFUL:  If WGS, resolution is in degrees
-        res=10. # meters
+        res=ds_hand.res[0] # meters
 #        arr_fim = np.empty([out_meta['height'], out_meta['width']], dtype=out_meta['dtype'])  
 #        arr_fim[:,:] = out_meta['nodata']
 
@@ -1187,14 +1114,63 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path):
     
     return
 
-def fp_width_2d_xns(df_coords, str_fim_path):
+# ===============================================================================
+#  Metrics using polygons from buffering cross-sections
+# ===============================================================================
+def metrics_from_2D_xns(ds_fim, ds_hand, df_seg, p_fpxnlen, dist_sl, parm_ivert):
     
+    arr_x = df_seg.x.values
+    arr_y = df_seg.y.values
     
-    print('hey!')
+    ## Get the segment midpoint:                          
+    midpt_indx = int(len(arr_x)/2)                             
+    midpt_x = df_seg.x.iloc[midpt_indx]
+    midpt_y = df_seg.y.iloc[midpt_indx]                              
     
+    # Build a cross-section from the end points:
+    lst_xy = build_xns(list(arr_y), list(arr_x), midpt_x, midpt_y, p_fpxnlen)
     
+    try:            
+        # Turn the cross-section into a linestring:
+        fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
+    except:
+        print('Error converting Xn endpts to LineString')
+        pass
+                                    
+    ## Buffer the cross section:        
+    buff_len=dist_sl/1.85 # about half of the line segment straight line distance
+    geom_fpls_buff = fp_ls.buffer(buff_len, cap_style=2)
+    xn_buff = mapping(geom_fpls_buff)                    
     
-    return
+    # Mask the bankpts file for each feature...
+    w_fim, trans_fim = rasterio.mask.mask(ds_fim, [xn_buff], crop=True)
+    w_fim=w_fim[0]
+    w_fim=w_fim[w_fim!=ds_fim.nodata]
+    
+    # << Related to mapping the floodplain based on HAND height >>
+    # Count the number of pixels in the buffered Xn...
+    num_pixels = w_fim.size
+     
+    # Calculate area of FP pixels...
+    area_pixels = num_pixels*(ds_fim.res[0]**2) # get grid resolution               
+    
+    # Calculate width by stretching it along the length of the 2D Xn...
+    fp_width = area_pixels/(buff_len*2)   
+#    fp_width=0 # For testing purposes
+    
+    ## TO DO:  Get other properties by analyzing values in w_fim (depth)    
+    fp_range=w_fim.max()-w_fim.min()
+        
+#    # Subtract channel width from fp width...
+#    fp_width = fp_width - (weighted_avg_left+weighted_avg_rt)
+#    
+#    if fp_width<0.: fp_width = 0 # don't have negatives              
+
+    # << CALL HAND VERTICAL SLICE ANALYSIS HERE >>                                                       
+#    bank_height_hand, chan_width_hand, bank_ang_hand = analyze_hand_poly(ds_hand, xn_buff, p_fpxnlen, parm_ivert)
+    
+
+    return fp_width, fp_range
 
 # ===============================================================================
 #  Delineate a FIM from the HAND grid using depth at each polygon (eg, catchment)
@@ -1302,35 +1278,38 @@ def fim_hand_poly(str_hand_path, str_sheds_path, str_reachid):
 # ===============================================================================
 #  Analyze DEM in vertical slices using an individual polygon
 # =============================================================================== 
-def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
-                        
+def analyze_hand_poly(ds_hand, xn_buff, p_fpxnlen, parm_ivert):
+
+    ## Mask hand grid using the 2D Xn buffer polygon:
+    w_hnd, trans_hnd = rasterio.mask.mask(ds_hand, [xn_buff], crop=True)
+    w_hnd=w_hnd[0]    
+                    
     i_rng=10
-    arr_slices = np.arange(i_interval, i_rng, i_interval)    
+    arr_slices = np.arange(parm_ivert, i_rng, parm_ivert)    
     
     lst_count=[]
     lst_width=[]
-    
-    tot_len = reach_buff_len + 2*reach_buff_width # for rounded cap style; else tot_len = reach_buff_len (square)
-    
+
     # List comprehension here instead??
     for i_step in arr_slices: 
 
-        num_pixels = w[(w<=i_step) & (w>=0.)].size
-           
+        num_pixels = w_hnd[(w_hnd<=i_step) & (w_hnd>=0.)].size           
         lst_count.append(num_pixels) # number of pixels greater than or equal to zero and less than the height interval
             
-        # Calculate area of FP pixels...
-        area_pixels = num_pixels*(res**2)
+        # Calculate area of FP pixels:
+        area_pixels = num_pixels*(ds_hand.res[0]**2)
         
-        # Calculate width by stretching it along the length of the 2D Xn...
-        lst_width.append(area_pixels/(tot_len))                 
+        # Calculate width by stretching it along the length of the 2D Xn:
+        lst_width.append(area_pixels/p_fpxnlen)                 
 
     df_steps = pd.DataFrame({'count':lst_count, 'height':arr_slices, 'width':lst_width})
     
-#    df_steps.plot(x='width',y='height', marker='.')            
+#    df_steps.plot(x='width',y='height', marker='.')  
+
+    ## IDEA:  You basically need to fit a straight line to segments along the curve and test the slope of that line          
     
     # Slope of width...
-    df_steps['width_diff'] = df_steps['width'].diff()
+    df_steps['width_diff'] = df_steps['width'].diff() # Use .diff(2) or 3 to average?
     
     # Slope of slope of count...
     df_steps['width_diff_2nd'] = df_steps['width_diff'].diff()  # Max val for width_diff_2nd is the bank?
@@ -1341,33 +1320,9 @@ def analyze_hand_poly(w, reach_buff_len, reach_buff_width, res, i_interval):
     bank_height = df_steps['height'].iloc[df_top3['height'].idxmin()]
     chan_width = df_steps['width'].iloc[df_top3['height'].idxmin()]
     bank_ang = np.arctan(bank_height/chan_width)
-    
-#    lst_area[df_steps.index[df_steps.height==1.2][0]]
-    
-#    sys.exit()
-    
-#    print('bank height: {}'.format(bank_height))
-#    print('channel width: {}'.format(chan_width))
-#    
+
                     
     return bank_height, chan_width, bank_ang
-
-# ===============================================================================
-#  Calculates floodplain metrics from 2-D cross sections
-# =============================================================================== 
-def fp_metrics_from_2D_xns(str_xns_path, str_fim_path):
-    
-    ## Open the floodplain Xn layer:
-    with fiona.open(str(str_xns_path), 'r') as xns:
-        
-        for xn in xns:
-            
-            
-            print('hey')
-            ## Create 2-D buffers:
-    
-    
-            ## Analyze FIM, DEM and/or HAND via buffers:
 
 # ===============================================================================
 #  Calculates channel width and sinuosity using parallel offset buffering
@@ -1390,7 +1345,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
     
     gp_coords = df_coords.groupby('linkno')
     
-#    schema_buff = {'geometry': 'Polygon', 'properties': {'buff': 'str'}}
+    ## Schema for the output properties file:
     schema_output = {'geometry': 'LineString', 'properties': {'linkno':'int','ch_wid_total':'float', 'ch_wid_1':'float', 'ch_wid_2':'float', 'dist_sl':'float', 'dist':'float', 'sinuosity':'float'}}                                  
         
     # Access the bank pixel layer...
@@ -1407,7 +1362,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
 #                # For writing out the buffers...
 #                with fiona.open(r'D:\Terrain_and_Bathymetry\USGS\CBP_analysis\DifficultRun\raw\buff_test_ls.shp','w','ESRI Shapefile', schema_buff) as buff_out:                     
                 
-            # Open another file to write the width...
+            # Open another file to write the output props:
             with fiona.open(str_outpath, 'w', 'ESRI Shapefile', schema_output, streamlines_crs) as output:
                 
                 for i_linkno, df_linkno in gp_coords:
@@ -1503,7 +1458,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
                             print('Right width set to max. Exception: {} \n'.format(e))
                        
                         # Write to the output shapefile here...
-                        output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity}, 'geometry':mapping(ls)})                                                    
+                        output.write({'properties':{'linkno':i_linkno,'ch_wid_total': weighted_avg_left+weighted_avg_rt,'ch_wid_1': weighted_avg_left,'ch_wid_2': weighted_avg_rt, 'dist_sl':dist_sl,'dist':dist,'sinuosity': sinuosity}, 'geometry':mapping(ls)})                        
                                     
 #                    if j > 50: break
     return
@@ -1554,7 +1509,7 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
         with rasterio.open(str_dem_path) as ds_dem:
         
             # Transform to pixel space
-            df_coords['col'], df_coords['row'] = ~ds_dem.affine * (df_coords['x'], df_coords['y'])   
+            df_coords['col'], df_coords['row'] = ~ds_dem.transform * (df_coords['x'], df_coords['y'])   
             
             df_coords[['row','col']] = df_coords[['row','col']].astype(np.int32)  
             df_coords.drop_duplicates(['col','row'], inplace=True) # rounding to integer
