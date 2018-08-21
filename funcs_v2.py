@@ -174,12 +174,12 @@ def define_grid_projection(str_source_grid, dst_crs, dst_file):
 # ==========================================================================
 #   Reproject a grid layer using rasterio 
 # ==========================================================================    
-def reproject_grid_layer(str_source_grid, dst_crs, dst_file):
-    
+def reproject_grid_layer(str_source_grid, dst_crs, dst_file, resolution):
+    """ Resolution is a pixel value as a tuple"""
     print('Reprojecting grid layer...')
     with rasterio.open(str_source_grid) as src:
         transform, width, height = calculate_default_transform(
-            src.crs, dst_crs, src.width, src.height, *src.bounds)
+            src.crs, dst_crs, src.width, src.height, *src.bounds, resolution)
         kwargs = src.meta.copy()
         kwargs.update({
             'crs': dst_crs,

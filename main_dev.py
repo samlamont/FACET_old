@@ -48,7 +48,8 @@ if __name__ == '__main__':
     ## Preprocessing paths and parameters:
     str_mpi_path=r'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
     str_taudem_dir=r'C:\Program Files\TauDEM\TauDEM5Exe' #\D8FlowDir.exe"'
-    str_whitebox_path= r"C:\whitebox_gat\gospatial\go-spatial_win_amd64.exe" # Go version
+    # str_whitebox_path= r"C:\whitebox_gat\gospatial\go-spatial_win_amd64.exe" # Go version
+    str_whitebox_path= r"D:\git_projects\FACET_misc\white_box_go_spatial\go-spatial_win_amd64.exe" # Go version
   
     ## Flags specifying what to run:
     run_whitebox = False  # Run Whitebox-BreachDepressions?
@@ -104,6 +105,57 @@ if __name__ == '__main__':
 #            funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
 #            
 ##            sys.exit() # for testing
+
+    ## << FOR BULK PROCESSING >>
+    ## Specify path to root:
+    lst_paths = glob.glob(r"F:\facet\CFN_CB_HUC10\*")
+    lst_paths.sort() # for testing
+    
+    #===============================================================================================   
+    ## Chesapeake file structure:
+    #===============================================================================================   
+    for i, path in enumerate(lst_paths):
+        
+        str_nhdhr_huc4 = glob.glob(path + '\*.shp')[0]
+        
+        ## Reproject the nhdhr lines to same as DEM:
+        dst_crs='+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs'      
+        
+        ## Re-project the NHD to match the DEM:
+        str_nhdhr_huc4_proj = funcs_v2.reproject_vector_layer(str_nhdhr_huc4, dst_crs)        
+        
+        for root, dirs, files in os.walk(path):
+            try:
+                str_huc = fnmatch.filter(files, '*.shp')[0]
+                str_dem = fnmatch.filter(files, '*.tif')[0]
+            except:
+                continue
+            
+            ## Get the DEM and HUC10 poly mask file paths:
+            str_dem_path = root + '\\' + str_dem
+            str_hucmask_path = root + '\\' + str_huc[1:]
+            
+            ## Assign a name for the clipped NHD-HR HUC10 file:
+            path_to_dem, dem_filename = os.path.split(str_dem_path)
+            str_nhdhr_huc10 = path_to_dem + '\\' + dem_filename[:-4]+'_nhdhires.shp'
+
+            # Project all dem rasters
+            name, ext = str_dem.split('.')
+            dst_file = root + '\\' + name + '_proj.' + ext
+            funcs_v2.reproject_grid_layer(str_dem_path, dst_crs, dst_file, resolution=(3.0, 3.0))
+
+            # new dem path
+            str_dem_path = dst_file
+
+            ## Clip the HUC4 nhdhr streamlines layer to the HUC10:  
+            # str_nhdhr_huc4_proj= r"D:\facet\SampleStructure\0205\0205_proj.shp"
+            funcs_v2.clip_features_using_grid(str_nhdhr_huc4_proj, str_nhdhr_huc10, str_dem_path) 
+            
+            # break
+            
+            ## Call preprocessing function: 
+            funcs_v2.preprocess_dem(str_dem_path, str_nhdhr_huc10, dst_crs, str_mpi_path, str_taudem_dir, str_whitebox_path, run_whitebox, run_wg, run_taudem)             
+#          sys.exit() # for testing
             
     #===============================================================================================           
     ## DRB file structure:
