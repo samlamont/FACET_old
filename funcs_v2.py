@@ -529,12 +529,15 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
     try:
         
         # Split DEM path and filename...  # NOT OS INDEPENDENT??
-        path_to_dem, dem_filename = os.path.split(str_dem_path)           
+        path_to_dem, dem_filename = os.path.split(str_dem_path)        
+        
+        ## Set this for a custom output folder:
+#        path_to_dem = '/home/sam/drb_preprocess_2018.08.28'
 
         inputProc = str(4) # number of cores to use for TauDEM processes
                
         # << Define all filenames here >>
-        str_danglepts_path = path_to_dem + '\\' + dem_filename[:-4]+'_wg.tif'
+        str_danglepts_path = path_to_dem + '/' + dem_filename[:-4]+'_wg.tif'
         
         dem_filename_tif = dem_filename[:-4]+'.tif'
         breach_filename_dep = dem_filename[:-4]+'_breach.dep'
@@ -542,7 +545,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
         breach_filepath_tif = os.path.join(path_to_dem + '/' + breach_filename_tif)
         breach_filepath_tif_proj = breach_filepath_tif[:-4] + '_proj.tif'
         
-        str_dem_path_tif = path_to_dem + '\\' + dem_filename[:-4]+'.tif'
+        str_dem_path_tif = path_to_dem + '/' + dem_filename[:-4]+'.tif'
         
         
 #        fel = path_to_dem + '\\' + dem_filename[:-4]+'_breach.tif'
@@ -550,17 +553,17 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
         p = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_p.tif')
         sd8 = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_sd8.tif')
         
-        ad8_wg = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ad8_wg.tif')
+        ad8_wg = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ad8_wg.tif')
         wtgr = os.path.join(str_danglepts_path)
-        ad8_no_wg = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ad8_no_wg.tif')
-        ord_g = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ord_g.tif')
-        tree = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_tree')
-        coord =os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_coord')
-        net = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_net.shp')
-        w = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_w.tif')
-        slp = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_slp.tif')
-        ang = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_ang.tif')
-        dd = os.path.join(path_to_dem + '\\' + breach_filename_tif[:-4]+'_hand.tif')
+        ad8_no_wg = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ad8_no_wg.tif')
+        ord_g = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ord_g.tif')
+        tree = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_tree')
+        coord =os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_coord')
+        net = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_net.shp')
+        w = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_w.tif')
+        slp = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_slp.tif')
+        ang = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ang.tif')
+        dd = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_hand.tif')
         
 #        # ==================== TauDEM Paths =========================
         # Hardcode paths from user input...
@@ -670,7 +673,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
 #            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
 #                  ' -sd8 ' + '"' + sd8 + '"'
                   
-            cmd = 'mpiexec' + ' -n ' + inputProc + ' D8FlowDir -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -p ' + '"' + p + '"' + \
+            cmd = 'mpiexec' + ' -n ' + inputProc + ' /home/sam/git/TauDEM/src/build/d8flowdir -fel ' + '"' + breach_filepath_tif + '"' + ' -p ' + '"' + p + '"' + \
                   ' -sd8 ' + '"' + sd8 + '"'                  
                           
             # Submit command to operating system
@@ -689,22 +692,22 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
                 message = message + line        
             print(message)    
                 
-#    #        # ============= << 3.a AD8 with weight grid >> ================        
-#    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
-#            cmd = 'mpiexec' + ' -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
-#            
-#            # Submit command to operating system
-#            print('Running TauDEM D8 FAC (with weight grid)...')
-#            os.system(cmd)
-#            # Capture the contents of shell command and print it to the arcgis dialog box
-#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-#            
-#            message = "\n"
-#            for line in process.stdout.readlines():
-#                if isinstance(line, bytes):	    # true in Python 3
-#                    line = line.decode()
-#                message = message + line
-#            print(message)   
+    #        # ============= << 3.a AD8 with weight grid >> ================        YES
+    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+            cmd = 'mpiexec' + ' -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_wg + '"'  + ' -wg ' + '"' + wtgr + '"'  + ' -nc '
+            
+            # Submit command to operating system
+            print('Running TauDEM D8 FAC (with weight grid)...')
+            os.system(cmd)
+            # Capture the contents of shell command and print it to the arcgis dialog box
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            
+            message = "\n"
+            for line in process.stdout.readlines():
+                if isinstance(line, bytes):	    # true in Python 3
+                    line = line.decode()
+                message = message + line
+            print(message)   
 #             
 #            # ============= << 3.b AD8 no weight grid >> ================
 #    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
@@ -752,49 +755,49 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
 #                print('Warning: Problem removing files!')
 #                pass
 #                
-#            # ============= << 5. Dinf with TauDEM >> =============                
-#            print('Running TauDEM Dinfinity...')        
-#            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -ang ' + '"' + ang + '"' + \
-#                  ' -slp ' + '"' + slp + '"'
-#            
-#            # Submit command to operating system
-#            os.system(cmd)
-#            
-#            # Capture the contents of shell command and print it to the arcgis dialog box
-#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-#            
-#            # Get some feedback from the process to print out...
-#            message = "\n"
-#            for line in process.stdout.readlines():
-#                line = line.decode()
-#        #            if isinstance(line, bytes):	   # true in Python 3
-#        #                line = line.decode()
-#                message = message + line        
-#            print(message)            
-#            
-#            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
-#            distmeth = 'v'
-#            statmeth = 'ave'
-#            
-#            # Use original DEM here...
-#            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
-#            cmd = 'mpiexec -n ' + inputProc + ' DinfDistDown -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
-#                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
-#        
-#            # Submit command to operating system
-#            os.system(cmd)
-#            
-#            # Get some feedback from the process to print out...
-#            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
-#            
-#            message = "\n"
-#            for line in process.stdout.readlines():
-#                line = line.decode()
-#        #            if isinstance(line, bytes):	   # true in Python 3
-#        #                line = line.decode()
-#                message = message + line
-#                
-#            print(message)
+            # ============= << 5. Dinf with TauDEM >> =============                
+            print('Running TauDEM Dinfinity...')        
+            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -ang ' + '"' + ang + '"' + \
+                  ' -slp ' + '"' + slp + '"'
+            
+            # Submit command to operating system
+            os.system(cmd)
+            
+            # Capture the contents of shell command and print it to the arcgis dialog box
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            
+            # Get some feedback from the process to print out...
+            message = "\n"
+            for line in process.stdout.readlines():
+                line = line.decode()
+        #            if isinstance(line, bytes):	   # true in Python 3
+        #                line = line.decode()
+                message = message + line        
+            print(message)            
+            
+            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
+            distmeth = 'v'
+            statmeth = 'ave'
+            
+            # Use original DEM here...
+            print('Running TauDEM Dinf Distance Down...') # Use Breached or Raw DEM here?? Currently using Raw
+            cmd = 'mpiexec -n ' + inputProc + ' DinfDistDown -fel ' + '"' + str_dem_path_tif + '"' + ' -ang ' + '"' + ang + '"' + \
+                  ' -src ' + '"' + ad8_wg + '"' + ' -dd ' + '"' + dd + '"' + ' -m ' + statmeth + ' ' + distmeth
+        
+            # Submit command to operating system
+            os.system(cmd)
+            
+            # Get some feedback from the process to print out...
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) 
+            
+            message = "\n"
+            for line in process.stdout.readlines():
+                line = line.decode()
+        #            if isinstance(line, bytes):	   # true in Python 3
+        #                line = line.decode()
+                message = message + line
+                
+            print(message)
 
     except:
         print("Unexpected error:", sys.exc_info()[0])
@@ -1327,7 +1330,7 @@ def analyze_hand_poly(ds_hand, xn_buff, p_fpxnlen, parm_ivert):
 # ===============================================================================
 #  Calculates channel width and sinuosity using parallel offset buffering
 # ===============================================================================    
-def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff):
+def  channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixels_path, str_reachid, cell_size, i_step, max_buff):
     
     print('Channel width from bank pixels -- segmented reaches...')
 
@@ -1540,7 +1543,7 @@ def bankpixels_from_curvature_window(df_coords, str_dem_path, str_bankpixels_pat
     #            progBar.setValue(j)
                 j+=1
                 
-                print('{} | {} -- {}'.format(tpl_row.linkno, j, total_len))
+#                print('{} | {} -- {}'.format(tpl_row.linkno, j, total_len))
                 
                 row_min = np.int(tpl_row.row - np.int(w_height/2))
                 row_max = np.int(tpl_row.row + np.int(w_height/2))
