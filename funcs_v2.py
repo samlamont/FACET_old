@@ -534,36 +534,36 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
         ## Set this for a custom output folder:
 #        path_to_dem = '/home/sam/drb_preprocess_2018.08.28'
 
-        inputProc = str(4) # number of cores to use for TauDEM processes
+        inputProc = str(2) # number of cores to use for TauDEM processes
                
         # << Define all filenames here >>
-        str_danglepts_path = path_to_dem + '/' + dem_filename[:-4]+'_wg.tif'
+        str_danglepts_path = os.path.join(path_to_dem + '/' + dem_filename[:-4]+'_wg.tif')
         
         dem_filename_tif = dem_filename[:-4]+'.tif'
         breach_filename_dep = dem_filename[:-4]+'_breach.dep'
         breach_filename_tif = dem_filename[:-4]+'_breach.tif'
-        breach_filepath_tif = os.path.join(path_to_dem + '/' + breach_filename_tif)
+        breach_filepath_tif = os.path.join(path_to_dem, breach_filename_tif)
         breach_filepath_tif_proj = breach_filepath_tif[:-4] + '_proj.tif'
         
-        str_dem_path_tif = path_to_dem + '/' + dem_filename[:-4]+'.tif'
+        str_dem_path_tif = os.path.join(path_to_dem + '/' + dem_filename[:-4]+'.tif')
         
         
 #        fel = path_to_dem + '\\' + dem_filename[:-4]+'_breach.tif'
         
-        p = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_p.tif')
-        sd8 = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_sd8.tif')
+        p = os.path.join(path_to_dem,breach_filename_tif[:-4]+'_p.tif')
+        sd8 = os.path.join(path_to_dem,breach_filename_tif[:-4]+'_sd8.tif')
         
-        ad8_wg = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ad8_wg.tif')
+        ad8_wg = os.path.join(path_to_dem,breach_filename_tif[:-4]+'_ad8_wg.tif')
         wtgr = os.path.join(str_danglepts_path)
-        ad8_no_wg = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ad8_no_wg.tif')
-        ord_g = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ord_g.tif')
-        tree = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_tree')
-        coord =os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_coord')
-        net = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_net.shp')
-        w = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_w.tif')
-        slp = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_slp.tif')
-        ang = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_ang.tif')
-        dd = os.path.join(path_to_dem + '/' + breach_filename_tif[:-4]+'_hand.tif')
+        ad8_no_wg = os.path.join(path_to_dem,breach_filename_tif[:-4]+'_ad8_no_wg.tif')
+        ord_g = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_ord_g.tif')
+        tree = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_tree')
+        coord =os.path.join(path_to_dem, breach_filename_tif[:-4]+'_coord')
+        net = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_net.shp')
+        w = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_w.tif')
+        slp = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_slp.tif')
+        ang = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_ang.tif')
+        dd = os.path.join(path_to_dem, breach_filename_tif[:-4]+'_hand.tif')
         
 #        # ==================== TauDEM Paths =========================
         # Hardcode paths from user input...
@@ -669,11 +669,11 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
 #                message = message + line        
 #            print(message)                            
  
-            # ==============  << 2. D8 FDR with TauDEM >> ================        
+            # ==============  << 2. D8 FDR with TauDEM >> ================       YES 
 #            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
 #                  ' -sd8 ' + '"' + sd8 + '"'
                   
-            cmd = 'mpiexec' + ' -n ' + inputProc + ' /home/sam/git/TauDEM/src/build/d8flowdir -fel ' + '"' + breach_filepath_tif + '"' + ' -p ' + '"' + p + '"' + \
+            cmd = 'mpiexec' + ' -n ' + inputProc + ' d8flowdir -fel ' + '"' + breach_filepath_tif + '"' + ' -p ' + '"' + p + '"' + \
                   ' -sd8 ' + '"' + sd8 + '"'                  
                           
             # Submit command to operating system
@@ -708,7 +708,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
                     line = line.decode()
                 message = message + line
             print(message)   
-#             
+             
 #            # ============= << 3.b AD8 no weight grid >> ================
 #    #        cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
 #            cmd = 'mpiexec -n ' + inputProc + ' AreaD8 -p ' + '"' + p + '"' + ' -ad8 ' + '"' + ad8_no_wg + '"'  +  ' -nc '
@@ -755,9 +755,9 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
 #                print('Warning: Problem removing files!')
 #                pass
 #                
-            # ============= << 5. Dinf with TauDEM >> =============                
+            # ============= << 5. Dinf with TauDEM >> =============        YES        
             print('Running TauDEM Dinfinity...')        
-            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + breach_filepath_tif_proj + '"' + ' -ang ' + '"' + ang + '"' + \
+            cmd = 'mpiexec -n ' + inputProc + ' DinfFlowDir -fel ' + '"' + breach_filepath_tif + '"' + ' -ang ' + '"' + ang + '"' + \
                   ' -slp ' + '"' + slp + '"'
             
             # Submit command to operating system
@@ -775,7 +775,7 @@ def preprocess_dem(str_dem_path, str_streamlines_path, dst_crs, str_mpi_path, st
                 message = message + line        
             print(message)            
             
-            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> =============
+            # ============= << 6. DinfDistanceDown (HAND) with TauDEM >> ============= YES
             distmeth = 'v'
             statmeth = 'ave'
             

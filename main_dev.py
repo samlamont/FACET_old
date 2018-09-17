@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     ## << FOR BULK PROCESSING >>
     ## Specify path to root:
-    lst_paths = glob.glob('/home/sam/nwm/bulk_processing/*')
+    lst_paths = glob.glob(r'E:\bulk_processing\*')
     lst_paths.sort() # for testing
     
 #    #===============================================================================================   
@@ -162,31 +162,32 @@ if __name__ == '__main__':
     #===============================================================================================   
     for i, path in enumerate(lst_paths):
         
-        if i != 9: continue
+        if i < 9: continue
          
         print('Processing:  ' + path)
         
         start_time_i = timeit.default_timer()
     
         try:
-            str_dem_path = glob.glob(path + '/*_dem.tif')[0]
-            str_hand_path = glob.glob(path + '/*hand*.tif')[0]
-            str_net_path = glob.glob(path + '/*breach_net.shp')[0]    
-            str_sheds_path = glob.glob(path + '/*w_diss_physio*.shp')[0]
+            str_dem_path = glob.glob(os.path.join(path,'*_dem.tif'))[0]
+            str_hand_path = glob.glob(os.path.join(path,'*hand*.tif'))[0]
+            str_net_path = glob.glob(os.path.join(path,'*breach_net.shp'))[0]    
+            str_sheds_path = glob.glob(os.path.join(path,'*w_diss_physio*.shp'))[0]
         except:
             print('WARNING:  There is an error in the paths!')
             pass # depending on what's being run, it might not matter if a file doesn't exist
         
         path_to_dem, dem_filename = os.path.split(str_dem_path)
         csv_filename = dem_filename[:-8] + '.csv'
-        str_csv_path = path_to_dem + '/' + csv_filename
+        str_csv_path = os.path.join(path_to_dem, csv_filename)
         
         # Output layers...
-        out_path='/home/sam/nwm/drb_chwidpixels_2018.08.22'
-        str_chxns_path = out_path + '/' + dem_filename[:-8] + '_chxns.shp'
-        str_fpxns_path = out_path + '/' + dem_filename[:-8] + '_fpxns.shp'
-        str_bankpts_path = out_path + '/' + dem_filename[:-8] + '_bankpts.shp'
-        str_bankpixels_path = out_path + '/' + dem_filename[:-8] + '_bankpixels.tif'
+        out_path=r'E:\bulk_processing\drb_chwidpixels_2018.09.10'
+        str_chxns_path = os.path.join(out_path, dem_filename[:-8] + '_chxns.shp')
+        str_chxns_path = os.path.join(out_path, dem_filename[:-8] + '_chxns.shp')
+        str_fpxns_path = os.path.join(out_path, dem_filename[:-8] + '_fpxns.shp')
+        str_bankpts_path = os.path.join(out_path, dem_filename[:-8] + '_bankpts.shp')
+        str_bankpixels_path = os.path.join(out_path, dem_filename[:-8] + '_bankpixels.tif')
         
         # Call preprocessing function: 
         dst_crs = {'init': u'epsg:26918'} # NAD83, UTM18N  
