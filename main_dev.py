@@ -148,7 +148,7 @@ if __name__ == '__main__':
         # if (i<=7)|(i>11): continue
         # if (i==0)|(i==5)|(i==8)|(i==9):continue # skip 02040105 for now
         # if ((i!=8)and(i!=9)):continue
-        if i != 3:
+        if i != 0:
             continue
 
         print('Processing:' + path)
@@ -237,7 +237,7 @@ if __name__ == '__main__':
             #
 
             # ==================== << METRICS BASED ON HAND CHARACTERISTICS >> ==============
-            funcs_v2.hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_raster_net_path, parm_ivert, logger)
+            funcs_v2.hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_raster_net_path, str_fim_path, logger)
             #
             # ============================ << FLOODPLAIN METRICS >> =====================================
             # 1D approach:

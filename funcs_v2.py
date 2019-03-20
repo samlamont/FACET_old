@@ -76,13 +76,13 @@ np.seterr(over='raise')
 # if speedups.available:
 #    speedups.enable() # enable performance enhancements written in C
 
-## LOGGER SETUP ##
+# LOGGER SETUP #
 # logging.basicConfig(filename='example.log', filemode='w', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 # does this need to be set? level=logging.DEBUG,
 # logging.debug('This message should go to the log file')
 # logging.info('So should this')
 # logging.warning('And this, too')
-## END LOGGER SETUP ##
+# END LOGGER SETUP #
 
 # ===============================================================================
 #  Utility functions
@@ -139,7 +139,7 @@ def compress_grids(str_in_grid, str_out_grid, logger):
     :param logger:
     :return:
     '''
-    ## Access the interp pts .tif file:
+    # Access the interp pts .tif file:
     with rasterio.open(str_in_grid) as ds_in:
         meta_in = ds_in.meta.copy()
         meta_in.update(compress='lzw')
@@ -226,7 +226,7 @@ def build_xns(lstThisSegmentRows, lstThisSegmentCols, midPtCol, midPtRow, p_xnle
 
 
 def get_xn_length_by_order(i_order, bool_isvalley):
-    ## Settings for channel cross-sections:
+    # Settings for channel cross-sections:
     if not (bool_isvalley):
         if i_order == 1:
             p_xnlength = 20
@@ -246,7 +246,7 @@ def get_xn_length_by_order(i_order, bool_isvalley):
         elif i_order >= 6:
             p_xnlength = 150
             p_fitlength = 20
-            ## Settings for floodplain cross-sections:
+            # Settings for floodplain cross-sections:
     elif bool_isvalley:
 
         if i_order == 1:
@@ -559,25 +559,25 @@ def create_wg_from_streamlines(str_streamlines_path, str_dem_path, str_danglepts
     return
 
 
-## ===============================================================================
-##  Get row/col coords of start pts from weight grid
-## ===============================================================================
+# ===============================================================================
+#  Get row/col coords of start pts from weight grid
+# ===============================================================================
 # def get_rowcol_from_wg(str_danglepts_path):
 #    
 #    logger.info('Reading weight grid...')
 #    with rasterio.open(str_danglepts_path) as ds_wg:
 #        wg_rast = ds_wg.read(1) # numpy array
-##        wg_crs = ds_wg.crs
-##        wg_affine = ds_wg.affine
+#        wg_crs = ds_wg.crs
+#        wg_affine = ds_wg.affine
 #        
 #    logger.info('Getting indices...')
 #    row_cols = np.where(wg_rast>0)    
 #    
 #    return row_cols
 
-## ===============================================================================
-##  For calling GoSpatial funcs
-## ===============================================================================
+# ===============================================================================
+#  For calling GoSpatial funcs
+# ===============================================================================
 def default_callback(str, logger):
     logger.info(str)
 
@@ -669,7 +669,7 @@ def preprocess_dem(str_dem_path, str_nhdhires_path, dst_crs, str_mpi_path, str_t
         # Split DEM path and filename...  # NOT OS INDEPENDENT??
         path_to_dem, dem_filename = os.path.split(str_dem_path)
 
-        ## Set this for a custom output folder:
+        # Set this for a custom output folder:
         #        path_to_dem = '/home/sam/drb_preprocess_2018.08.28'
 
         inputProc = str(2)  # number of cores to use for TauDEM processes
@@ -724,7 +724,7 @@ def preprocess_dem(str_dem_path, str_nhdhires_path, dst_crs, str_mpi_path, str_t
         '''
         # =================== << Whitebox Functions >> =====================
         if run_whitebox:
-            ## Whitebox python:
+            # Whitebox python:
             wbt.set_working_dir(path_to_dem)
             #            wbt.feature_preserving_denoise(dem_filename_tif, "smoothed.tif", filter=9)
             wbt.breach_depressions(dem_filename, breach_filename_tif)
@@ -732,17 +732,17 @@ def preprocess_dem(str_dem_path, str_nhdhires_path, dst_crs, str_mpi_path, str_t
         #            logger.info('Whitebox .exe path:  ' + 'r' + '"' + str_whitebox_path + '"')
         #            str_whitebox_dir, str_whitebox_exe = os.path.split(str_whitebox_path)
         #
-        #            ## << Run the BreachDepressions tool, specifying the arguments >>
+        #            # << Run the BreachDepressions tool, specifying the arguments >>
         #            name = "BreachDepressions"
         #            args = [dem_filename_tif, breach_filename_dep, '-1', '-1', 'True', 'True'] # GoSpatial verion. NOTE:  Make these last four variables accessible to user?
-        ##            args = ['--dem='+dem_filename, '-o='+breach_filename_dep] # Rust version
+        #            args = ['--dem='+dem_filename, '-o='+breach_filename_dep] # Rust version
         #
         #            ret = run_gospatial_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
-        ##            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
+        #            ret = run_rust_whiteboxtool(name, args, str_whitebox_dir, str_whitebox_exe, path_to_dem, callback)
         #            if ret != 0:
         #                logger.info("ERROR: return value={}".format(ret))
         #
-        #            ##  << Convert .dep to .tif here? >>  NOTE:  Only for DRB hack when using .dep files
+        #            #  << Convert .dep to .tif here? >>  NOTE:  Only for DRB hack when using .dep files
         #            name = "WhiteBox2GeoTiff"
         #            args = [breach_filename_dep, breach_filename_tif]
         #
@@ -750,10 +750,10 @@ def preprocess_dem(str_dem_path, str_nhdhires_path, dst_crs, str_mpi_path, str_t
         #            if ret != 0:
         #                logger.info("ERROR: return value={}".format(ret))
         #
-        #            ## The converted TIFF file is saved without a crs, so save a projected version:
+        #            # The converted TIFF file is saved without a crs, so save a projected version:
         #            define_grid_projection(breach_filepath_tif, dst_crs, breach_filepath_tif_proj)
         #
-        #            ## Remove native Whitebox files and unprojected tif:
+        #            # Remove native Whitebox files and unprojected tif:
         #            dep_path=path_to_dem + '\\' + breach_filename_dep
         #            tas_path=path_to_dem + '\\' + breach_filename_dep[:-3]+'tas'
         #            os.remove(dep_path)
@@ -811,8 +811,8 @@ def preprocess_dem(str_dem_path, str_nhdhires_path, dst_crs, str_mpi_path, str_t
             #            logger.info(message)
             #
             #            # ==============  << 2. D8 FDR with TauDEM >> ================       YES
-            ##            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
-            ##                  ' -sd8 ' + '"' + sd8 + '"'
+            #            cmd = '"' + mpipath + '"' + ' -n ' + inputProc + ' ' + d8flowdir + ' -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
+            #                  ' -sd8 ' + '"' + sd8 + '"'
             #
             #            cmd = 'mpiexec' + ' -n ' + inputProc + ' d8flowdir -fel ' + '"' + str_dem_path + '"' + ' -p ' + '"' + p + '"' + \
             #                  ' -sd8 ' + '"' + sd8 + '"'
@@ -820,7 +820,7 @@ def preprocess_dem(str_dem_path, str_nhdhires_path, dst_crs, str_mpi_path, str_t
             #            # Submit command to operating system
             #            logger.info('Running TauDEM D8 Flow Direction...')
             #            os.system(cmd)
-            ##
+            #
             #            # Capture the contents of shell command and logger.info it to the arcgis dialog box
             #            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
             #
@@ -975,7 +975,7 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path, logg
     
     Returns: Dataframe.  Channel properties (m) and Q in cms
     '''
-    ## Define the vertical slice array:
+    # Define the vertical slice array:
     interval = 0.3048  # vertical step height NOTE:  Make sure you're considering units here
     rng = 25  # maximum height NOTE:  What should this be?? (25 is the NFIE setting)
     arr_slices = np.arange(interval, rng, interval)
@@ -1001,31 +1001,31 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path, logg
         # Open the slope layer:
         with rasterio.open(str(str_slp_path)) as ds_slp:
 
-            ## Open the catchment polygon layer:
+            # Open the catchment polygon layer:
             with fiona.open(np.str(str_sheds_path), 'r') as sheds:
 
-                ## Loop over catchments:
+                # Loop over catchments:
                 for shed in sheds:
 
-                    ## Get the linkno:
+                    # Get the linkno:
                     linkno = shed['properties']['FEATUREID']
 
                     if linkno != 4509202: continue
 
                     logger.info(linkno)
 
-                    ## Mask the HAND grid for each catchment polygon:
+                    # Mask the HAND grid for each catchment polygon:
                     w_hand, out_transform = rasterio.mask.mask(ds_hand, [shed['geometry']], crop=True, filled=False,
                                                                invert=False)
 
-                    ## ALSO mask the slp grid:
+                    # ALSO mask the slp grid:
                     w_slp, out_tranform = rasterio.mask.mask(ds_slp, [shed['geometry']], crop=True, filled=False,
                                                              invert=False)
 
-                    ## Get reach length here from the attribute table?
+                    # Get reach length here from the attribute table?
                     length = shed['properties']['LENGTHKM'] * 1000  # Make sure units are correct (should be meters)
 
-                    ## Get reach slope:
+                    # Get reach slope:
                     slope = shed['properties']['SLOPE']
 
                     # Vertical slice loop:
@@ -1043,38 +1043,38 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path, logg
                             cell_height = i_hand_w[test]
                             volume = 10 * 10 * cell_height.sum()
 
-                            ## Create a boolean array to use for selecting the slope pixels for this step:
+                            # Create a boolean array to use for selecting the slope pixels for this step:
                             #                            i_hand_bool = ((w_hand<=i_step)&(w_hand>=0))
 
-                            ## Slope grid values for this HAND interval:                            
+                            # Slope grid values for this HAND interval:                            
                             i_slp_w = w_slp[i_hand_w < 0]
 
-                            ## Surface area of inundated zone:
+                            # Surface area of inundated zone:
                             area_surf = i_num_pixels * (res ** 2)
 
-                            ## Channel bed area of inundated zone:
+                            # Channel bed area of inundated zone:
                             area_bed = ((res ** 2) * (1 + i_slp_w ** 2) ** 0.5).sum()
 
-                            ## Volume of this slice:
+                            # Volume of this slice:
                             volume = ((res ** 2) * arr_inun).sum() * -1.  # cubic meters correct?
                             # volume = area_surf*i_interval 
 
-                            ## Cross-sectional area:
+                            # Cross-sectional area:
                             area_xn = volume / length
 
-                            ## Wetted perimeter:
+                            # Wetted perimeter:
                             wetted_p = area_bed / length
 
-                            ## Top width:
+                            # Top width:
                             top_width = area_surf / length
 
-                            ## Hydraulic radius:
+                            # Hydraulic radius:
                             hyd_radius = area_xn / wetted_p
 
-                            ## Calculate Q from Manning's equation:
+                            # Calculate Q from Manning's equation:
                             Q = (1 / roughness) * area_xn * (hyd_radius ** 0.667) * (slope ** 0.5)
 
-                            ## Add to list:
+                            # Add to list:
                             lst_props.append((linkno, i_step, area_surf, area_bed, volume, area_xn, wetted_p, top_width,
                                               hyd_radius, Q))
 
@@ -1084,16 +1084,28 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path, logg
                         except:
                             pass  # end of loop
 
-    ## Create final output dataframe:
+    # Create final output dataframe:
     df_props = pd.DataFrame(lst_props, columns=['linkno', 'height', 'area_surf', 'area_bed', 'volume',
                                                 'area_xn', 'wetted_p', 'top_width', 'hyd_radius', 'Q'])
-    ## Write it to csv:
+    # Write it to csv:
     df_props.to_csv(r"D:\hand\nfie\020700\difficult_run\dr_hydroprops_test.csv")
 
     return
 
 
-def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, parm_ivert, logger):
+def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_path, logger):
+    """
+    Calculation of floodplain metrics by analyzing HAND using 2D cross-sections and
+    differentiating between channel pixels and floodplain pixels.
+
+    :param str_hand_path: Path to the HAND grid .tif
+    :param str_chanmet_segs: Path to the output of the channel_width_from_bank_pixels() func
+    :param str_src_path: Path to the .tif file where stream reaches correspond to linkno values
+    :param str_fp_path: Path to the floodplain grid .tif
+    :param logger: Logger instance for messaging
+    :return: Writes out additional attributes to the file in str_chanmet_segs
+
+    """
     # Open the stream network segments layer with channel metrics:
     gdf_segs = gpd.read_file(str_chanmet_segs)
 
@@ -1104,10 +1116,18 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, parm_ive
     #    lst_lower_rug=[]
     #    lst_upper_rug=[]
     #    lst_rug_ratio=[]
+    # Channel metrics:
     lst_bnk_ht = []
     lst_chn_wid = []
     lst_chn_shp = []
-    lst_geom = []  # for testing
+    lst_geom = []  # for testing/creating a new output file
+    # FP metrics:
+    lst_fpmin = []
+    lst_fpmax = []
+    lst_fpstd = []
+    lst_fprug = []
+    lst_fpwid = []
+    lst_fprange = []
 
     # Open the hand layer...
     with rasterio.open(str(str_hand_path)) as ds_hand:
@@ -1121,170 +1141,226 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, parm_ive
 
             res = ds_hand.res[0]
 
-            # Loop over each segment:
-            for tpl in gdf_segs.itertuples():
+            # Access the floodplain grid:
+            with rasterio.open(str(str_fp_path)) as ds_fp:
 
-                try:
-
-                    if tpl.linkno != 3343:
-                        continue
-
-                    logger.info(f'\t{tpl.Index}')
-
-                    # Get Xn length based on stream order:
-                    p_xnlength, p_fitlength = get_xn_length_by_order(tpl.order, False)
-
-                    x, y = zip(*mapping(tpl.geometry)['coordinates'])
-
-                    # Get the segment midpoint: NOTE-can also use this to identify the channel blob?
-                    midpt_x = x[int(len(x) / 2)]  # Also-this isn't actually midpt by distance
-                    midpt_y = y[int(len(y) / 2)]
-
-                    # Build a 1D cross-section from the end points:
-                    lst_xy = build_xns(y, x, midpt_x, midpt_y, p_xnlength)
+                # Loop over each segment:
+                for tpl in gdf_segs.itertuples():
 
                     try:
-                        # Turn the cross-section into a linestring:
-                        fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
-                    except:
-                        logger.info('Error converting Xn endpts to LineString')
-                        pass
 
-                    # Buffer the cross section to form a 2D rectangle:
-                    buff_len = tpl.dist_sl / 2.5  # about half of the line segment straight line distance --> AFFECTS LABELLED ARRAY!
-                    geom_fpls_buff = fp_ls.buffer(buff_len, cap_style=2)
-                    xn_buff = mapping(geom_fpls_buff)
+                        # if tpl.linkno != 3343:
+                        #     continue
 
-                    # Mask the hand grid for each feature...
-                    w_hand, trans_hand = rasterio.mask.mask(ds_hand, [xn_buff], crop=True)
-                    w_hand = w_hand[0]
-                    w_hand[w_hand == ds_hand.nodata] = -9999.
+                        logger.info(f'\t{tpl.Index}')
 
-                    # Set up vertical intervals to slice using horizontal plane:
-                    w_min = w_hand[w_hand > -9999.].min()
-                    w_max = w_hand.max()
-                    arr_slices = np.linspace(w_min, w_max, 50)
+                        # Get Xn length based on stream order:
+                        p_xnlength, p_fitlength = get_xn_length_by_order(tpl.order, False)
 
-                    # Also mask the src layer (1 time) to get the indices of the raster stream line:
-                    w_src, trans_src = rasterio.mask.mask(ds_src, [xn_buff], crop=True)
-                    w_src = w_src[0]
+                        x, y = zip(*mapping(tpl.geometry)['coordinates'])
 
-                    # NOTE: You need to make sure you're looking at channel pixels here only and not other stuff
-                    # Channel pixel indices:
-                    src_inds = np.where(w_src == tpl.linkno)
-                    # Convert to a set:
-                    src_inds = set(zip(src_inds[0], src_inds[1]))
+                        # Get the segment midpoint: NOTE-can also use this to identify the channel blob?
+                        midpt_x = x[int(len(x) / 2)]  # Also-this isn't actually midpt by distance
+                        midpt_y = y[int(len(y) / 2)]
 
-                    # To produce labeled array:
-                    s = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+                        # Build a 1D cross-section from the end points:
+                        lst_xy = build_xns(y, x, midpt_x, midpt_y, p_xnlength)
 
-                    # Consider the blobs of hand pixels in each slice:
-                    lst_count = []
-                    lst_width = []
-                    #                    set_inds=set([])
-                    lst_inds = []
-                    lst_height = []
+                        try:
+                            # Turn the cross-section into a linestring:
+                            fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
+                        except Exception as e:
+                            logger.info(f'Error converting Xn endpts to LineString: {str(e)}')
+                            pass
 
-                    w_inds = np.indices(w_hand.shape)
-                    for i, i_step in enumerate(arr_slices[1:]):  # skip the first entry
+                        # Buffer the cross section to form a 2D rectangle:
+                        # about half of the line segment straight line distance --> AFFECTS LABELLED ARRAY!
+                        buff_len = tpl.dist_sl / 2.5
+                        geom_fpls_buff = fp_ls.buffer(buff_len, cap_style=2)
+                        xn_buff = mapping(geom_fpls_buff)
 
-                        # Create a binary array where within step height threshold:
-                        w_step = w_hand.copy()
-                        w_step[(w_step < i_step) & (w_step > -9999.)] = 1
-                        w_step[w_step != 1] = 0
+                        # Mask the hand grid for each feature...
+                        w_hand, trans_hand = rasterio.mask.mask(ds_hand, [xn_buff], crop=True)
+                        w_hand = w_hand[0]
+                        w_hand[w_hand == ds_hand.nodata] = -9999.
 
-                        # scipy labeled array:
-                        labeled_arr, num_feats = label(w_step, structure=s)
+                        # Set up vertical intervals to slice using 2D cross-section horizontal plane:
+                        w_min = w_hand[w_hand > -9999.].min()
+                        w_max = w_hand.max()
+                        arr_slices = np.linspace(w_min, w_max, 50)
 
-                        # You need to loop over num_feats here and do the test:
-                        for feat in np.arange(0, num_feats):  # does this produce the correct number for feat?
+                        # Also mask the src layer (1 time) to get the indices of the raster stream line:
+                        w_src, trans_src = rasterio.mask.mask(ds_src, [xn_buff], crop=True)
+                        w_src = w_src[0]
 
-                            # Get the window indices of each feature:
-                            inds = set(zip(w_inds[0][labeled_arr == feat + 1], w_inds[1][labeled_arr == feat + 1]))
+                        # Also mask the floodplain grid:
+                        w_fp, trans_fp = rasterio.mask.mask(ds_fp, [xn_buff], crop=True)
+                        w_fp = w_fp[0]
 
-                            if (len(src_inds.intersection(
-                                    inds)) > 0):  # if they share indices, consider this blob connected to the channel
+                        # NOTE: You need to make sure you're looking at channel pixels here only and not other stuff
+                        # Channel pixel indices:
+                        src_inds = np.where(w_src == tpl.linkno)
+                        # Convert to a set to keep only unique values:
+                        src_inds = set(zip(src_inds[0], src_inds[1]))
 
-                                #                    set_inds.update(inds)
-                                lst_count.append(len(inds))
-                                lst_width.append(len(inds) * (res ** 2) / tpl.dist_sl)
-                                lst_height.append(i_step)
-                                lst_inds.append(inds)
-                    #                                set_inds.update(inds)
+                        # To produce labeled array:
+                        s = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
 
-                    # End slices here
-                    df_steps = pd.DataFrame(
-                        {'count': lst_count, 'height': lst_height, 'width': lst_width, 'inds': lst_inds})
+                        # Consider the blobs of hand pixels in each slice:
+                        lst_count = []
+                        lst_width = []
+                        # set_inds=set([])
+                        lst_inds = []
+                        lst_height = []
 
-                    if len(df_steps.index) < 3:
+                        # Begin vertical slicing using 2D cross-section horizontal plane:
+                        w_inds = np.indices(w_hand.shape)
+                        for i, i_step in enumerate(arr_slices[1:]):  # skip the first entry
+
+                            # Create a binary array where within step height threshold:
+                            w_step = w_hand.copy()
+                            w_step[(w_step < i_step) & (w_step > -9999.)] = 1
+                            w_step[w_step != 1] = 0
+
+                            # scipy labeled array:
+                            labeled_arr, num_feats = label(w_step, structure=s)
+
+                            # You need to loop over num_feats here and do the test:
+                            for feat in np.arange(0, num_feats):  # does this produce the correct number for feat?
+
+                                # Get the window indices of each feature:
+                                inds = set(zip(w_inds[0][labeled_arr == feat + 1], w_inds[1][labeled_arr == feat + 1]))
+
+                                # if they share indices, consider this blob connected to the channel
+                                if len(src_inds.intersection(inds)) > 0:
+                                    lst_count.append(len(inds))
+                                    lst_width.append(len(inds) * (res ** 2) / tpl.dist_sl)
+                                    lst_height.append(i_step)
+                                    lst_inds.append(inds)
+
+                        # End slices here
+                        df_steps = pd.DataFrame(
+                            {'count': lst_count, 'height': lst_height, 'width': lst_width, 'inds': lst_inds})
+
+                        if len(df_steps.index) < 3:
+                            lst_bnk_ht.append(-9999.)
+                            lst_chn_wid.append(-9999.)
+                            lst_chn_shp.append(-9999.)
+                            lst_linkno.append(tpl.linkno)
+                            lst_geom.append(tpl.geometry)
+                            continue
+
+                        df_steps['dy'] = df_steps.height.diff()
+                        df_steps['dx'] = df_steps.width.diff()
+                        df_steps['delta_width'] = df_steps.dx / df_steps.dy
+                        indx = df_steps.delta_width.iloc[1:].idxmax() - 1
+
+                        chn_wid = df_steps.width.iloc[indx]
+                        bnk_ht = df_steps.height.iloc[indx]
+                        chn_shp = np.arctan(bnk_ht / chn_wid)  # sort of like entrenchment?
+
+                        # Separate the FP and channel pixels using bnk_ht
+                        # Channel pixels only:
+                        for i_set in df_steps.inds.iloc[0:indx+1].tolist():
+                            src_inds.update(i_set)
+
+                        # NEED A TUPLE OF 1D ARRAYS FOR ARRAY INDEXING
+                        lst1, lst2 = zip(*list(src_inds))
+
+                        # the hand grid window values at indices corresponding to channel pixels only?
+                        w_chn = w_hand[lst1, lst2]  # TODO: Calculate additional chan metrics from this?
+
+                        # Get the FP pixels without the channel pixels:
+                        mask = np.ones_like(w_hand, dtype=bool)
+                        mask[lst1, lst2] = False
+                        try:
+                            w_fp = w_fp[mask]
+                            w_fp = w_fp[w_fp != ds_fp.nodata]  # also remove nodata vals
+
+                            # Now calculate FP metrics on w_fp (only FP pixels, no channel pixels):
+                            # Elevation range
+                            fp_max = w_fp.max()
+                            fp_min = w_fp.min()
+                            fp_std = w_fp.std()
+                            try:
+                                fp_range = fp_max - fp_min
+                            except:
+                                fp_range = 0
+                                pass
+
+                            # FP width:
+                            num_pixels = w_fp.size
+                            area_pixels = num_pixels * (ds_fp.res[0] ** 2)  # get grid resolution
+                            # Calculate width by stretching it along the length of the 2D Xn:
+                            fp_width = area_pixels / (buff_len * 2)
+
+                            # FP roughness (Planar area vs. actual area):
+                            fp_rug = rugosity(w_fp, ds_fp.res[0], logger)  # returns -9999. if error
+
+                            # # TODO: Write out the channel pixels to a tif?
+                            # shp = np.shape(w_hand)
+                            # # window bounds in x-y space (west, south, east, north)
+                            # bounds = rasterio.transform.array_bounds(shp[0], shp[1], trans_hand)
+                            # # Rasterio v1.x upper left row and column of window?
+                            # col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3])
+                            #
+                            # row_min = np.int(row_min)
+                            # col_min = np.int(col_min)
+                            # row_max = np.int(row_min + shp[0])
+                            # col_max = np.int(col_min + shp[1])
+                            #
+                            # arr_w = np.empty([row_max - row_min, col_max - col_min], dtype=out_meta['dtype'])
+                            # arr_w[:, :] = arr_chn[row_min:row_max, col_min:col_max]
+                            #
+                            # inds_lt = np.where(arr_chn[row_min:row_max, col_min:col_max] < w)
+                            # arr_w[inds_lt] = w[inds_lt]
+                            #
+                            # # assign the FIM window for this catchment to the total array
+                            # arr_chn[row_min:row_max, col_min:col_max] = arr_w
+
+                            # Save metrics to lists:
+                            # FP metrics:
+                            lst_fpmax.append(fp_max)
+                            lst_fpmin.append(fp_min)
+                            lst_fpstd.append(fp_std)
+                            lst_fprug.append(fp_rug)
+                            lst_fpwid.append(fp_width)
+                            lst_fprange.append(fp_range)
+                        except Exception as e:
+                            logger.info(f'Zero sized FP array: {str(e)}')
+                            # FP metrics:
+                            lst_fpmax.append(-9999.)
+                            lst_fpmin.append(-9999.)
+                            lst_fpstd.append(-9999.)
+                            lst_fprug.append(-9999.)
+                            lst_fpwid.append(-9999.)
+                            lst_fprange.append(-9999.)
+
+                        # Channel metrics:
+                        lst_bnk_ht.append(bnk_ht)
+                        lst_chn_wid.append(chn_wid)
+                        lst_chn_shp.append(chn_shp)
+                        lst_linkno.append(tpl.linkno)
+                        lst_geom.append(tpl.geometry)
+
+                        # logger.info('hey')
+                    except Exception as e:
+                        logger.info(f'Error with segment {tpl.Index}; skipping. {str(e)}')
+                        # sys.exit()
+                        # FP metrics:
+                        lst_fpmax.append(-9999.)
+                        lst_fpmin.append(-9999.)
+                        lst_fpstd.append(-9999.)
+                        lst_fprug.append(-9999.)
+                        lst_fpwid.append(-9999.)
+                        lst_fprange.append(-9999.)
+                        # Channel metrics:
                         lst_bnk_ht.append(-9999.)
                         lst_chn_wid.append(-9999.)
                         lst_chn_shp.append(-9999.)
                         lst_linkno.append(tpl.linkno)
                         lst_geom.append(tpl.geometry)
                         continue
-
-                    df_steps['dy'] = df_steps.height.diff()
-                    df_steps['dx'] = df_steps.width.diff()
-                    df_steps['delta_width'] = df_steps.dx / df_steps.dy
-                    indx = df_steps.delta_width.iloc[1:].idxmax() - 1
-
-                    chn_wid = df_steps.width.iloc[indx]
-                    bnk_ht = df_steps.height.iloc[indx]
-                    chn_shp = np.arctan(bnk_ht / chn_wid)  # sort of like entrenchment?
-
-                    # Separate the FP and channel pixels using bnk_ht
-                    # Channel pixels only:
-                    for i_set in df_steps.inds.iloc[0:indx].tolist():
-                        src_inds.update(i_set)
-
-                    # TODO: Get FP inds and subtract channel inds to get only FP
-
-                    # TODO: Write out the channel pixels to a tif
-                    # NEED A TUPLE OF 1D ARRAYS FOR ARRAY INDEXING
-                    lst1, lst2 = zip(*list(src_inds))
-
-                    # the hand grid window values at indices corresponding to channel pixels only?
-                    w_chn = w_hand[lst1, lst2]
-
-                    shp = np.shape(w_hand)
-
-                    # window bounds in x-y space (west, south, east, north)
-                    bounds = rasterio.transform.array_bounds(shp[0], shp[1], trans_hand)
-                    # Rasterio v1.x upper left row and column of window?
-                    col_min, row_min = ~ds_hand.transform * (bounds[0], bounds[3])
-
-                    row_min = np.int(row_min)
-                    col_min = np.int(col_min)
-                    row_max = np.int(row_min + shp[0])
-                    col_max = np.int(col_min + shp[1])
-
-                    arr_w = np.empty([row_max - row_min, col_max - col_min], dtype=out_meta['dtype'])
-                    arr_w[:, :] = arr_chn[row_min:row_max, col_min:col_max]
-
-                    inds_lt = np.where(arr_chn[row_min:row_max, col_min:col_max] < w)
-                    arr_w[inds_lt] = w[inds_lt]
-
-                    # assign the FIM window for this catchment to the total array
-                    arr_chn[row_min:row_max, col_min:col_max] = arr_w
-
-                    # Save metrics to lists:
-                    lst_bnk_ht.append(bnk_ht)
-                    lst_chn_wid.append(chn_wid)
-                    lst_chn_shp.append(chn_shp)
-                    lst_linkno.append(tpl.linkno)
-                    lst_geom.append(tpl.geometry)
-
-                    # logger.info('hey')
-                except Exception as e:
-                    logger.info(f'Error with segment {tpl.Index}; skipping. {str(e)}')
-                    # sys.exit()
-                    lst_bnk_ht.append(-9999.)
-                    lst_chn_wid.append(-9999.)
-                    lst_chn_shp.append(-9999.)
-                    lst_linkno.append(tpl.linkno)
-                    lst_geom.append(tpl.geometry)
-                    continue
 
         # Re-save the channel metrics shapefile with FP metrics added:
         #        gdf_segs['slp_chan']=lst_lower_slp
@@ -1304,26 +1380,31 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, parm_ive
         gdf_test['geometry'] = lst_geom
         gdf_test['bnk_ht2'] = lst_bnk_ht
         gdf_test['chn_shp'] = lst_chn_shp
-        gdf_test['chn_wid2'] = lst_chn_wid
+        gdf_test['chn_wid'] = lst_chn_wid
         gdf_test['linkno'] = lst_linkno
+        gdf_test['fp_min'] = lst_fpmin
+        gdf_test['fp_max'] = lst_fpmax
+        gdf_test['fp_std'] = lst_fpstd
+        gdf_test['fp_wid'] = lst_fpwid
+        gdf_test['fp_rug'] = lst_fprug
+        gdf_test['fp_rng'] = lst_fprange
         gdf_test.to_file(str_chanmet_segs[:-4] + '_TEST_HAND_ANALYSIS.shp')
 
 
 def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
-    '''
+    """
     Calculate floodplain metrics from 2D cross-sections
-    
-    Inputs:
-        str_fim_path: path to the flood inundation raster
-        str_chwid: name of the field in the channel segment layer containing pre-calculated 
-                   channel width values
-        str_chanmet_segs: path to the segmented streamline layer containing pre-calculated channel metrics
-                          (output form channel width from bank pixel method)
-        
-        NOTE: stream order a required field in str_chanmet_segs ('order')
-    '''
+    :param str_fim_path: path to the flood inundation raster
+    :param str_chwid: name of the field in the channel segment layer containing pre-calculated
+                      channel width values
+    :param str_chanmet_segs: path to the segmented streamline layer containing pre-calculated channel metrics
+                             (output form channel width from bank pixel method)
+    :param logger:
+    :return: Resaves the str_chanmet_segs file with additonal attributes
 
-    ## Open the stream network segments layer with channel metrics:
+    NOTE: stream order a required field in str_chanmet_segs ('order')
+    """
+    # Open the stream network segments layer with channel metrics:
     gdf_segs = gpd.read_file(str_chanmet_segs)
 
     lst_fpwid = []
@@ -1334,24 +1415,24 @@ def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
     lst_std = []
     lst_rug = []
 
-    ## Keep only valid geometries:
+    # Keep only valid geometries:
     gdf_segs = gdf_segs[gdf_segs.geometry.is_valid]
 
     # Open the floodplain layer...
     with rasterio.open(str(str_fim_path)) as ds_fim:
-        ## Loop over each segment:
+        # Loop over each segment:
         for tpl in gdf_segs.itertuples():
 
             try:
-                #                if tpl.Index==931: # FOR TESTING
-                #                    logger.info('pause')
+                # if tpl.Index==931: # FOR TESTING
+                #      logger.info('pause')
 
-                ## Get Xn length based on stream order:
+                # Get Xn length based on stream order:
                 p_xnlength, p_fitlength = get_xn_length_by_order(tpl.order, True)
 
                 x, y = zip(*mapping(tpl.geometry)['coordinates'])
 
-                ## Get the segment midpoint:                                                    
+                # Get the segment midpoint:                                                    
                 midpt_x = x[int(len(x) / 2)]
                 midpt_y = y[int(len(y) / 2)]
 
@@ -1365,12 +1446,12 @@ def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
                     logger.info('Error converting Xn endpts to LineString')
                     pass
 
-                ## Buffer the cross section to form a 2D rectangle:        
+                # Buffer the cross section to form a 2D rectangle:        
                 buff_len = tpl.dist_sl / 1.85  # about half of the line segment straight line distance
                 geom_fpls_buff = fp_ls.buffer(buff_len, cap_style=2)
                 xn_buff = mapping(geom_fpls_buff)
 
-                ## Mask the fp for each feature:
+                # Mask the fp for each feature:
                 w_fim, trans_fim = rasterio.mask.mask(ds_fim, [xn_buff], crop=True)
                 w_fim = w_fim[0]
                 w_fim = w_fim[w_fim != ds_fim.nodata]
@@ -1385,8 +1466,8 @@ def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
                     lst_rug.append(-9999.)
                     continue
 
-                ## OR, Get indices of FIM pixels and use those for the DEM
-                #                    inds_fim=np.where(w_fim!=ds_fim.nodata)
+                # OR, Get indices of FIM pixels and use those for the DEM
+                # inds_fim=np.where(w_fim!=ds_fim.nodata)
 
                 fp_fim = w_fim[w_fim > 0]  # Assumes is along zero height pixels
                 fp_min = fp_fim.min()
@@ -1404,19 +1485,19 @@ def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
                 fp_width = area_pixels / (buff_len * 2)
                 #    fp_width=0 # For testing purposes
 
-                ## Elevation range using HAND heights:
+                # Elevation range using HAND heights:
                 try:
-                    fp_range = w_fim.max() - w_fim.min()
+                    fp_range = fp_max - fp_min
                 except:
                     fp_range = 0
                     pass
 
-                ## Subtract channel width from fp width...
+                # Subtract channel width from fp width...
                 fp_width = fp_width - getattr(tpl, str_chwid)
-                ## If negative, just set it to zero:
+                # If negative, just set it to zero:
                 if fp_width < 0.: fp_width = 0
 
-                ## Try calculating roughness (Planar area vs. actual area):
+                # Try calculating roughness (Planar area vs. actual area):
                 fp_rug = rugosity(w_fim, ds_fim.res[0], logger)  # returns -9999. if error
 
                 lst_min.append(fp_min)
@@ -1436,10 +1517,10 @@ def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
                 lst_max.append(-9999.)
                 lst_std.append(-9999.)
                 lst_rug.append(-9999.)
-                #                sys.exit() ## TEST TEST TEST
+                #                sys.exit() # TEST TEST TEST
                 continue
 
-    ## Re-save the channel metrics shapefile with FP metrics added:         
+    # Re-save the channel metrics shapefile with FP metrics added:         
     #    gdf_out=gpd.GeoDataFrame()
     #    gdf_out.crs=gdf_segs.crs
     #    gdf_out.geometry=gdf_segs.geometry
@@ -1581,7 +1662,7 @@ def analyze_hand_2Dxn(w_hnd, tpl_xy, parm_ivert, dist_sl, res, logger):
     try:
         w_min = w_hnd[w_hnd > -9999.].min()
         w_max = w_hnd.max()
-        ## OR for scale-independence:
+        # OR for scale-independence:
         arr_slices = np.linspace(w_min, w_max, 40)
 
         lst_count = []
@@ -1589,34 +1670,34 @@ def analyze_hand_2Dxn(w_hnd, tpl_xy, parm_ivert, dist_sl, res, logger):
         lst_inds = []
         lst_height = []
 
-        ## OR channel inds are where w_hnd==0:
+        # OR channel inds are where w_hnd==0:
         chan_inds = np.where(w_hnd == 0)
         chan_inds = set(zip(chan_inds[0], chan_inds[1]))
 
-        ## NOTE: You need to make sure you're looking at channel pixels here only and not other stuff
+        # NOTE: You need to make sure you're looking at channel pixels here only and not other stuff
         from scipy.ndimage import label
         s = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
 
         w_inds = np.indices(w_hnd.shape)  # .T[:,:,[1, 0]]
         for i, i_step in enumerate(arr_slices[1:]):  # skip the first entry
 
-            ## Create a binary array where within step height threshold:
+            # Create a binary array where within step height threshold:
             w_step = w_hnd.copy()
             w_step[(w_step < i_step) & (w_step > -9999.)] = 1
             w_step[w_step != 1] = 0
 
-            ## Start with the first blob (assume there is only one and it is the channel)
-            ## Go to the next step; find indices of all blobs
-            ## If any of these indices are within (or adjacent to?) the previous blob, append them
-            ## Continue
+            # Start with the first blob (assume there is only one and it is the channel)
+            # Go to the next step; find indices of all blobs
+            # If any of these indices are within (or adjacent to?) the previous blob, append them
+            # Continue
 
-            ## scipy labeled array:
+            # scipy labeled array:
             labeled_arr, num_feats = label(w_step, structure=s)
 
-            ## You need to loop over num_feats here and do the test:          
+            # You need to loop over num_feats here and do the test:          
             for feat in np.arange(1, num_feats):
 
-                ## Get the window indices of each feature:
+                # Get the window indices of each feature:
                 inds = set(zip(w_inds[0][labeled_arr == feat], w_inds[1][labeled_arr == feat]))
 
                 if (len(chan_inds & inds) > 0):  # consider it the channel
@@ -1644,12 +1725,12 @@ def analyze_hand_2Dxn(w_hnd, tpl_xy, parm_ivert, dist_sl, res, logger):
     #        if len(df_steps.index)<3:
     #            return -9999., -9999., -9999., -9999., -9999., -9999.
 
-    #        ## NOTE:  The scale at which you analyze this should depend on stream order? (by scale I mean vertical distance of slope/curvature measurement)
-    #        ## Let the vertical step vary based on min/max HAND height (and potentially width variance or something?) to automatically
-    #        ## account for variations in scale.  Use np.gradient (central difference) to the power of 2 (?) to consider curvature
-    ##        dx=arr_slices[2]-arr_slices[1]
-    ##        df_steps['slp']=np.gradient(df_steps.width, dx) # change in width per interval of depth
-    ##        df_steps['curv']=abs(np.gradient(df_steps.slp, dx))
+    #        # NOTE:  The scale at which you analyze this should depend on stream order? (by scale I mean vertical distance of slope/curvature measurement)
+    #        # Let the vertical step vary based on min/max HAND height (and potentially width variance or something?) to automatically
+    #        # account for variations in scale.  Use np.gradient (central difference) to the power of 2 (?) to consider curvature
+    #        dx=arr_slices[2]-arr_slices[1]
+    #        df_steps['slp']=np.gradient(df_steps.width, dx) # change in width per interval of depth
+    #        df_steps['curv']=abs(np.gradient(df_steps.slp, dx))
     #
     #        df_steps['d1']=df_steps.width.diff()
     #        df_steps['d2']=df_steps.width.diff(periods=2)
@@ -1658,7 +1739,7 @@ def analyze_hand_2Dxn(w_hnd, tpl_xy, parm_ivert, dist_sl, res, logger):
     #        df_steps['d5']=df_steps.width.diff(periods=5)
     #
     #
-    #        ## Inflection points:
+    #        # Inflection points:
     #        idx1=get_indx(df_steps.d1)
     #        idx2=get_indx(df_steps.d2)
     #        idx3=get_indx(df_steps.d3)
@@ -1680,11 +1761,11 @@ def analyze_hand_2Dxn(w_hnd, tpl_xy, parm_ivert, dist_sl, res, logger):
     #        bnk_ht=df_steps.height.iloc[idx_bnk] # bank height
     #        chn_wid = df_steps.width.iloc[idx_bnk] # width at bank height
 
-    #        ## Plotting for tests:
+    #        # Plotting for tests:
     #        ax=df_steps.plot(x='width',y='height', marker='.', logx=False, logy=False)
     #        ax.set(xlabel='Width', ylabel='Height')
     #        sys.exit()
-    ## IDEAS:
+    # IDEAS:
     # 1. Get the coefficients of the 2D polynomial that fits the curve?:
     #    a,b,c=np.polyfit(df_steps.height, df_steps.width, 2)    
     # 2. Split the curve in two parts equally between w_hnd.min and max, then take several ratios:
@@ -1694,7 +1775,7 @@ def analyze_hand_2Dxn(w_hnd, tpl_xy, parm_ivert, dist_sl, res, logger):
     #        h2=df_steps.height[df_steps.width==w2].values[0]
     #        h3=df_steps.height[df_steps.width==w3].values[0]
 
-    #        ## Channel vs. FP slope:
+    #        # Channel vs. FP slope:
     #        slope_chan=chn_wid/bnk_ht
     #        slope_fp=(df_steps.width.iloc[-1]-chn_wid)/(w_max-bnk_ht)
     #        slp_ratio=slope_chan/slope_fp
@@ -1838,7 +1919,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
 
     gp_coords = df_coords.groupby('linkno')
 
-    ## Schema for the output properties file:
+    # Schema for the output properties file:
     schema_output = {'geometry': 'LineString',
                      'properties': {'linkno': 'int', 'ch_wid_total': 'float', 'ch_wid_1': 'float', 'ch_wid_2': 'float',
                                     'dist_sl': 'float', 'dist': 'float', 'sinuosity': 'float', 'order': 'int'}}
@@ -1849,7 +1930,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
         # Successive buffer-mask operations to count bank pixels at certain intervals
         lst_buff = range(int(ds_bankpixels.res[0]), max_buff, int(ds_bankpixels.res[0]))
 
-        #        ## TEST Multiprocessing
+        #        # TEST Multiprocessing
         #        func = partial(chan_wid_bnk_pixel_worker, i_step, max_buff, lst_buff, ds_bankpixels) # Can't send an open dataset reader?
         #        pool = mp.Pool(processes=2)
         #        lst_out = pool.map(func, gp_coords)
@@ -1857,7 +1938,7 @@ def channel_width_from_bank_pixels(df_coords, str_streamlines_path, str_bankpixe
         #        pool.join()
         #        for item in lst_out:
         #            print('pause')
-        #        ## END TEST MP
+        #        # END TEST MP
 
         # Access the streamlines layer...
         with fiona.open(str(str_streamlines_path), 'r') as streamlines:  # WHY IS THIS BEING OPENED??
@@ -2195,8 +2276,8 @@ def find_bank_angles(tpl_bfpts, lst_total_slices, xn_len, xn_elev_n, parm_ivert,
                     rt_angle = 0
 
         else:  # if there's only one slice, just set it to 0? or -9999?
-            ##                            lf_angle = -9999
-            ##                            rt_angle = -9999
+            #                            lf_angle = -9999
+            #                            rt_angle = -9999
             # Use bottom slice for bank angle estimate...
             lf_bottom_ind = lst_total_slices[0][0]
             rt_bottom_ind = lst_total_slices[0][-1]
@@ -2468,7 +2549,7 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
             5. Search for slope break
             6. If slope break exists, determine "bankfull" locations along Xn
     """
-    ## USE NUMPY ARRAYS VS. LISTS??
+    # USE NUMPY ARRAYS VS. LISTS??
     lst_bfmetrics = []  # list of tuples to contain output
 
     try:
@@ -2547,7 +2628,7 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
                         0] + 1)  # splits the contiguous elements into separate tuple elements
 
                     # Find the one that contains an element of the previous slice?...
-                    ##                if prev_val in [this_arr for this_arr in tpl_parts]: # use a list comprehension here?
+                    #                if prev_val in [this_arr for this_arr in tpl_parts]: # use a list comprehension here?
                     for this_arr in tpl_parts:
                         if prev_val in this_arr[:]:
                             lst_total_cnt.append(this_arr)
@@ -2618,17 +2699,17 @@ def analyze_xnelev(df_xn_elev, param_ivert, xn_ptdist, param_ratiothreshold, par
                     tpl_bankfullpts[3] + np.min(tpl_row.elev),) + tpl_bankangles + (bf_area,) + (ch_width,) + (
                                   overbank_ratio,) + (total_arearatio,)
 
-                    ##                    # Output metrics tuple...       local ID      bank angles        bank height                        bank elevation                    xn area
-                    ##                    tpl_metrics = (this_linkno,) +  (xn_cnt,) + tpl_bankangles + (tpl_bankfullpts[3],) + (tpl_bankfullpts[2] + np.min(tpl_thisxn[2]),) + (bf_area,)
+                    #                    # Output metrics tuple...       local ID      bank angles        bank height                        bank elevation                    xn area
+                    #                    tpl_metrics = (this_linkno,) +  (xn_cnt,) + tpl_bankangles + (tpl_bankfullpts[3],) + (tpl_bankfullpts[2] + np.min(tpl_thisxn[2]),) + (bf_area,)
 
-                    ##                    # Output bank points tuple...
-                    ##                    tpl_bankpts = tpl_bankfullpts + (this_linkno,) + (tpl_bankfullpts[2] + np.min(tpl_thisxn[2]),)
+                    #                    # Output bank points tuple...
+                    #                    tpl_bankpts = tpl_bankfullpts + (this_linkno,) + (tpl_bankfullpts[2] + np.min(tpl_thisxn[2]),)
 
                     lst_bfmetrics.append(tpl_metrics)
 
                     break  # no need to keep slicing here, unless we want to try for FP analysis
-    ##            else:
-    ##                logger.info 'no bank!'
+    #            else:
+    #                logger.info 'no bank!'
 
     #        progDialog.close()
 
@@ -2752,10 +2833,10 @@ def chanmetrics_bankpts(df_xn_elev, str_xnsPath, str_demPath, str_bankptsPath, p
 
 #                sys.exit() # for testing
 
-## ==================================================================================
+# ==================================================================================
 #      Floodplain Xn analysis              
-## ==================================================================================                    
-def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_path, logger):
+# ==================================================================================                    
+def read_fp_xns_shp_and_get_1d_fp_metrics(str_xns_path, str_fp_path, str_dem_path, logger):
     '''
     1. Read Xn file with geopandas, groupby linkno
     2. Linkno extent window like below using rasterio
@@ -2764,14 +2845,14 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
     5. Sample DEM and fp grids as numpy arrays
     6. Calculate metrics
     '''
-    ## Depth:
+    # Depth:
     lst_min_d = []
     lst_max_d = []
     lst_rng_d = []
     lst_mean_d = []
     lst_std_d = []
     lst_sum_d = []
-    ## Elevation:
+    # Elevation:
     lst_min_e = []
     lst_max_e = []
     lst_rng_e = []
@@ -2783,31 +2864,31 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
     lst_width = []
     lst_index = []
 
-    ## Read xn file:
+    # Read xn file:
     logger.info('Reading Xn file...')
     gdf_xns = gpd.read_file(str_xns_path)
-    ## Groupby linkno:
+    # Groupby linkno:
     gp_xns = gdf_xns.groupby('linkno')
 
     # Access the floodplain and DEM grids:
     with rasterio.open(str(str_dem_path)) as ds_dem:
         with rasterio.open(str(str_fp_path)) as ds_fp:
-            ## Loop over the linkno groups:
+            # Loop over the linkno groups:
             for linkno, gdf in gp_xns:
 
                 #                if linkno!=3343:continue # for testing
 
-                ## Loop over the Xns along this linkno:
+                # Loop over the Xns along this linkno:
                 for i, tpl in enumerate(gdf.itertuples()):
                     try:
-                        ## Xn ID and index for saving:                    
+                        # Xn ID and index for saving:                    
                         lst_id.append(i)
                         lst_index.append(tpl.Index)
                     except Exception as e:
                         print(f'Error with itertuple: {str(e)}')
 
                     try:
-                        ## Mask the floodplain grid with each Xn:
+                        # Mask the floodplain grid with each Xn:
                         w_fp, w_trans = rasterio.mask.mask(ds_fp, [mapping(tpl.geometry)], crop=True)
                         w_fp = w_fp[0]
                         w_fp = w_fp[w_fp != ds_fp.nodata]  # ignore nodata vals
@@ -2820,7 +2901,7 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
                         lst_width.append(-9999.)
 
                     try:
-                        ## Relative elevation (depth) metrics:
+                        # Relative elevation (depth) metrics:
                         min_depth = w_fp.min()
                         max_depth = w_fp.max()
                         rng_depth = max_depth - min_depth
@@ -2842,12 +2923,12 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
                         lst_sum_d.append(-9999.)
 
                     try:
-                        ## Also mask the DEM to get absolute elevation metrics:
+                        # Also mask the DEM to get absolute elevation metrics:
                         w_dem, w_trans = rasterio.mask.mask(ds_dem, [mapping(tpl.geometry)], crop=True)
                         w_dem = w_dem[0]
                         w_dem = w_dem[w_dem != ds_dem.nodata]
 
-                        ## Absolute elevation metrics:
+                        # Absolute elevation metrics:
                         min_elev = w_dem.min()
                         max_elev = w_dem.max()
                         rng_elev = max_elev - min_elev
@@ -2868,17 +2949,17 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
                         lst_std_e.append(-9999.)
                         lst_sum_e.append(-9999.)
 
-                        ## Initialize fields:
+                        # Initialize fields:
             gdf_xns['xn_id_1dfp'] = -9999.
             gdf_xns['totwid_1dfp'] = -9999.
-            ## Depth:
+            # Depth:
             gdf_xns['mindep_1dfp'] = -9999.
             gdf_xns['maxdep_1dfp'] = -9999.
             gdf_xns['rngdep_1dfp'] = -9999.
             gdf_xns['meandep_1dfp'] = -9999.
             gdf_xns['stddep_1dfp'] = -9999.
             gdf_xns['sumdep_1dfp'] = -9999.
-            ## Elevation:
+            # Elevation:
             gdf_xns['minele_1dfp'] = -9999.
             gdf_xns['maxele_1dfp'] = -9999.
             gdf_xns['rngele_1dfp'] = -9999.
@@ -2886,17 +2967,17 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
             gdf_xns['stdele_1dfp'] = -9999.
             gdf_xns['sumele_1dfp'] = -9999.
 
-            ## Add new values:
+            # Add new values:
             gdf_xns.loc[lst_index, 'xn_id_1dfp'] = lst_id
             gdf_xns.loc[lst_index, 'totwid_1dfp'] = lst_width
-            ## Depth:
+            # Depth:
             gdf_xns.loc[lst_index, 'mindep_1dfp'] = lst_min_d
             gdf_xns.loc[lst_index, 'maxdep_1dfp'] = lst_max_d
             gdf_xns.loc[lst_index, 'rngdep_1dfp'] = lst_rng_d
             gdf_xns.loc[lst_index, 'meandep_1dfp'] = lst_mean_d
             gdf_xns.loc[lst_index, 'stddep_1dfp'] = lst_std_d
             gdf_xns.loc[lst_index, 'sumdep_1dfp'] = lst_sum_d
-            ## Elevation:
+            # Elevation:
             gdf_xns.loc[lst_index, 'minele_1dfp'] = lst_min_e
             gdf_xns.loc[lst_index, 'maxele_1dfp'] = lst_max_e
             gdf_xns.loc[lst_index, 'rngele_1dfp'] = lst_rng_e
@@ -2904,7 +2985,7 @@ def read_fp_xns_shp_and_get_1D_fp_metrics(str_xns_path, str_fp_path, str_dem_pat
             gdf_xns.loc[lst_index, 'stdele_1dfp'] = lst_std_e
             gdf_xns.loc[lst_index, 'sumele_1dfp'] = lst_sum_e
 
-            ## Save it again:
+            # Save it again:
             gdf_xns.to_file(str_xns_path)
 
     '''
@@ -2993,7 +3074,7 @@ def write_xns_shp(df_coords, streamlines_crs, str_xns_path, bool_isvalley, p_xng
             #                # ======================================
 
             # NOTE:  Define Xn length (p_xnlength) -- and other parameters? -- relative to stream order
-            ## Settings for stream channel cross-sections:
+            # Settings for stream channel cross-sections:
             p_xnlength, p_fitlength = get_xn_length_by_order(i_order, bool_isvalley)
 
             reach_len = len(df_linkno['x'])
@@ -3122,7 +3203,7 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
 
             length = line_shply.length  # units depend on crs
 
-            if length > 9:  ## NOTE: This value is dependent on CRS!!
+            if length > 9:  # NOTE: This value is dependent on CRS!!
 
                 i_linkno = line['properties'][str_reachid]
                 i_order = line['properties'][str_orderid]
@@ -3170,7 +3251,7 @@ def get_stream_coords_from_features(str_streams_filepath, cell_size, str_reachid
 
         df_final = pd.concat(lst_df_final)
     #        except Exception as e:
-    ##            logger.info('Error!: {}'.format(e.strerror))
+    #            logger.info('Error!: {}'.format(e.strerror))
     #            QtGui.QMessageBox.information(self, 'Error!', '{}'.format(e.strerror))
 
     return df_final, streamlines_crs  # A list of lists
