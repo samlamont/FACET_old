@@ -1321,9 +1321,6 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_p
                                 # Calculate width by stretching it along the length of the 2D Xn:
                                 fp_width = area_pixels / (buff_len * 2)
 
-                                if fp_width > 0:
-                                    print('pause')
-
                                 # FP roughness (Planar area vs. actual area):
                                 fp_rug = rugosity(w_fp, ds_fp.res[0], logger)  # returns -9999. if error
 

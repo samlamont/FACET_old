@@ -139,19 +139,14 @@ if __name__ == '__main__':
     lst_paths = glob.glob(r'E:\bulk_processing\*')
     lst_paths.sort()  # for testing
 
+    lst_paths = [lst_paths[i] for i in [5, 8, 9]]  # subset for testing
+
     # ===============================================================================================
     # DRB file structure:
     # ===============================================================================================
     for i, path in enumerate(lst_paths):
 
-        # if (i==0)|(i==1)|(i==2)|(i==3)|(i==5)|(i==12): continue
-        # if (i<=7)|(i>11): continue
-        # if (i==0)|(i==5)|(i==8)|(i==9):continue # skip 02040105 for now
-        # if ((i!=8)and(i!=9)):continue
-        # if i != 0:
-        #     continue
-
-        print('Processing:' + path)
+        logger.info('Processing: ' + path)
 
         start_time_i = timeit.default_timer()
 
@@ -165,7 +160,7 @@ if __name__ == '__main__':
             str_nhdhires_path = None  # used in pre-processing for deriving ad8 grid via TauDEM
             str_src_path = glob.glob(os.path.join(path, '*_dem_breach_ad8_wg.tif'))[0]
         except Exception as e:
-            logger.warning('WARNING:  There is an error in file the paths; {}'.format(str(e)))
+            logger.warning('There is an error in file the paths; {}'.format(str(e)))
             pass  # depending on what's being run, it might not matter if a file doesn't exist
 
         path_to_dem, dem_filename = os.path.split(str_dem_path)
@@ -174,11 +169,11 @@ if __name__ == '__main__':
 
         # Output layers:
         # Optionally specify an output directory: (otherwise use same as inputs [path])
-        out_path = r'E:\DRB_Files\drb_chan_fp_metrics_2019.03.26'
+        alt_path = r'E:\DRB_Files\drb_chan_fp_metrics_2019.02.14'
 
-        str_chxns_path = os.path.join(out_path, dem_filename[:-8] + '_chxns.shp')
-        str_bankpts_path = os.path.join(out_path, dem_filename[:-8] + '_bankpts.shp')
-        str_chanmet_segs = os.path.join(path, dem_filename[:-8] + '_breach_net_ch_width.shp')
+        str_chxns_path = os.path.join(path, dem_filename[:-8] + '_chxns.shp')
+        str_bankpts_path = os.path.join(path, dem_filename[:-8] + '_bankpts.shp')
+        str_chanmet_segs = os.path.join(alt_path, dem_filename[:-8] + '_breach_net_ch_width.shp')
         str_bankpixels_path = os.path.join(path, dem_filename[:-8] + '_bankpixels.tif')
         str_fpxns_path = os.path.join(path, dem_filename[:-8] + '_fpxns.shp')
         str_fim_path = os.path.join(path, dem_filename[:-8] + '_dem_breach_hand_3sqkm_fim.tif')
@@ -234,7 +229,6 @@ if __name__ == '__main__':
             #
             # ============================= << DELINEATE FIM >> =====================================
             # funcs_v2.fim_hand_poly(str_hand_path, str_sheds_path, str_reachid, logger)
-            #
 
             # ==================== << METRICS BASED ON HAND CHARACTERISTICS >> ==============
             funcs_v2.hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_raster_net_path,
