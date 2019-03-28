@@ -1093,7 +1093,7 @@ def reach_characteristics_hand(str_sheds_path, str_hand_path, str_slp_path, logg
     return
 
 
-def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_path, logger):
+def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_path, str_dem_path, logger):
     """
     Calculation of floodplain metrics by analyzing HAND using 2D cross-sections and
     differentiating between channel pixels and floodplain pixels.
@@ -1110,12 +1110,6 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_p
     gdf_segs = gpd.read_file(str_chanmet_segs)
 
     lst_linkno = []
-    #    lst_lower_slp=[]
-    #    lst_upper_slp=[]
-    #    lst_slp_ratio=[]
-    #    lst_lower_rug=[]
-    #    lst_upper_rug=[]
-    #    lst_rug_ratio=[]
     # Channel metrics:
     lst_bnk_ht = []
     lst_chn_wid = []
@@ -1128,6 +1122,10 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_p
     lst_fprug = []
     lst_fpwid = []
     lst_fprange = []
+    lst_fpmin_e = []
+    lst_fpmax_e = []
+    lst_fpstd_e = []
+    lst_fprange_e = []
 
     # Open the hand layer...
     with rasterio.open(str(str_hand_path)) as ds_hand:
@@ -1144,159 +1142,224 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_p
             # Access the floodplain grid:
             with rasterio.open(str(str_fp_path)) as ds_fp:
 
-                # Loop over each segment:
-                for tpl in gdf_segs.itertuples():
+                with rasterio.open(str(str_dem_path)) as ds_dem:
 
-                    try:
-
-                        # if tpl.linkno != 3343:
-                        #     continue
-
-                        logger.info(f'\t{tpl.Index}')
-
-                        # Get Xn length based on stream order:
-                        p_xnlength, p_fitlength = get_xn_length_by_order(tpl.order, False)
-
-                        x, y = zip(*mapping(tpl.geometry)['coordinates'])
-
-                        # Get the segment midpoint: NOTE-can also use this to identify the channel blob?
-                        midpt_x = x[int(len(x) / 2)]  # Also-this isn't actually midpt by distance
-                        midpt_y = y[int(len(y) / 2)]
-
-                        # Build a 1D cross-section from the end points:
-                        lst_xy = build_xns(y, x, midpt_x, midpt_y, p_xnlength)
+                    # Loop over each segment:
+                    for tpl in gdf_segs.itertuples():
 
                         try:
-                            # Turn the cross-section into a linestring:
-                            fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
-                        except Exception as e:
-                            logger.info(f'Error converting Xn endpts to LineString: {str(e)}')
-                            pass
+                            # if tpl.linkno != 3343:
+                            #     continue
 
-                        # Buffer the cross section to form a 2D rectangle:
-                        # about half of the line segment straight line distance --> AFFECTS LABELLED ARRAY!
-                        buff_len = tpl.dist_sl / 2.5
-                        geom_fpls_buff = fp_ls.buffer(buff_len, cap_style=2)
-                        xn_buff = mapping(geom_fpls_buff)
+                            logger.info(f'\t{tpl.Index}')
 
-                        # Mask the hand grid for each feature...
-                        w_hand, trans_hand = rasterio.mask.mask(ds_hand, [xn_buff], crop=True)
-                        w_hand = w_hand[0]
-                        w_hand[w_hand == ds_hand.nodata] = -9999.
+                            # Get Xn length based on stream order:
+                            p_xnlength, p_fitlength = get_xn_length_by_order(tpl.order, False)
 
-                        # Set up vertical intervals to slice using 2D cross-section horizontal plane:
-                        w_min = w_hand[w_hand > -9999.].min()
-                        w_max = w_hand.max()
-                        arr_slices = np.linspace(w_min, w_max, 50)
+                            x, y = zip(*mapping(tpl.geometry)['coordinates'])
 
-                        # Also mask the src layer (1 time) to get the indices of the raster stream line:
-                        w_src, trans_src = rasterio.mask.mask(ds_src, [xn_buff], crop=True)
-                        w_src = w_src[0]
+                            # Get the segment midpoint: NOTE-can also use this to identify the channel blob?
+                            midpt_x = x[int(len(x) / 2)]  # Also-this isn't actually midpt by distance
+                            midpt_y = y[int(len(y) / 2)]
 
-                        # Also mask the floodplain grid:
-                        w_fp, trans_fp = rasterio.mask.mask(ds_fp, [xn_buff], crop=True)
-                        w_fp = w_fp[0]
+                            # Build a 1D cross-section from the end points:
+                            lst_xy = build_xns(y, x, midpt_x, midpt_y, p_xnlength)
 
-                        # NOTE: You need to make sure you're looking at channel pixels here only and not other stuff
-                        # Channel pixel indices:
-                        src_inds = np.where(w_src == tpl.linkno)
-                        # Convert to a set to keep only unique values:
-                        src_inds = set(zip(src_inds[0], src_inds[1]))
-
-                        # To produce labeled array:
-                        s = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
-
-                        # Consider the blobs of hand pixels in each slice:
-                        lst_count = []
-                        lst_width = []
-                        # set_inds=set([])
-                        lst_inds = []
-                        lst_height = []
-
-                        # Begin vertical slicing using 2D cross-section horizontal plane:
-                        w_inds = np.indices(w_hand.shape)
-                        for i, i_step in enumerate(arr_slices[1:]):  # skip the first entry
-
-                            # Create a binary array where within step height threshold:
-                            w_step = w_hand.copy()
-                            w_step[(w_step < i_step) & (w_step > -9999.)] = 1
-                            w_step[w_step != 1] = 0
-
-                            # scipy labeled array:
-                            labeled_arr, num_feats = label(w_step, structure=s)
-
-                            # You need to loop over num_feats here and do the test:
-                            for feat in np.arange(0, num_feats):  # does this produce the correct number for feat?
-
-                                # Get the window indices of each feature:
-                                inds = set(zip(w_inds[0][labeled_arr == feat + 1], w_inds[1][labeled_arr == feat + 1]))
-
-                                # if they share indices, consider this blob connected to the channel
-                                if len(src_inds.intersection(inds)) > 0:
-                                    lst_count.append(len(inds))
-                                    lst_width.append(len(inds) * (res ** 2) / tpl.dist_sl)
-                                    lst_height.append(i_step)
-                                    lst_inds.append(inds)
-
-                        # End slices here
-                        df_steps = pd.DataFrame(
-                            {'count': lst_count, 'height': lst_height, 'width': lst_width, 'inds': lst_inds})
-
-                        if len(df_steps.index) < 3:
-                            lst_bnk_ht.append(-9999.)
-                            lst_chn_wid.append(-9999.)
-                            lst_chn_shp.append(-9999.)
-                            lst_linkno.append(tpl.linkno)
-                            lst_geom.append(tpl.geometry)
-                            continue
-
-                        df_steps['dy'] = df_steps.height.diff()
-                        df_steps['dx'] = df_steps.width.diff()
-                        df_steps['delta_width'] = df_steps.dx / df_steps.dy
-                        indx = df_steps.delta_width.iloc[1:].idxmax() - 1
-
-                        chn_wid = df_steps.width.iloc[indx]
-                        bnk_ht = df_steps.height.iloc[indx]
-                        chn_shp = np.arctan(bnk_ht / chn_wid)  # sort of like entrenchment?
-
-                        # Separate the FP and channel pixels using bnk_ht
-                        # Channel pixels only:
-                        for i_set in df_steps.inds.iloc[0:indx+1].tolist():
-                            src_inds.update(i_set)
-
-                        # NEED A TUPLE OF 1D ARRAYS FOR ARRAY INDEXING
-                        lst1, lst2 = zip(*list(src_inds))
-
-                        # the hand grid window values at indices corresponding to channel pixels only?
-                        w_chn = w_hand[lst1, lst2]  # TODO: Calculate additional chan metrics from this?
-
-                        # Get the FP pixels without the channel pixels:
-                        mask = np.ones_like(w_hand, dtype=bool)
-                        mask[lst1, lst2] = False
-                        try:
-                            w_fp = w_fp[mask]
-                            w_fp = w_fp[w_fp != ds_fp.nodata]  # also remove nodata vals
-
-                            # Now calculate FP metrics on w_fp (only FP pixels, no channel pixels):
-                            # Elevation range
-                            fp_max = w_fp.max()
-                            fp_min = w_fp.min()
-                            fp_std = w_fp.std()
                             try:
-                                fp_range = fp_max - fp_min
-                            except:
-                                fp_range = 0
+                                # Turn the cross-section into a linestring:
+                                fp_ls = LineString([Point(lst_xy[0]), Point(lst_xy[1])])
+                            except Exception as e:
+                                logger.info(f'Error converting Xn endpts to LineString: {str(e)}')
                                 pass
 
-                            # FP width:
-                            num_pixels = w_fp.size
-                            area_pixels = num_pixels * (ds_fp.res[0] ** 2)  # get grid resolution
-                            # Calculate width by stretching it along the length of the 2D Xn:
-                            fp_width = area_pixels / (buff_len * 2)
+                            # Buffer the cross section to form a 2D rectangle:
+                            # about half of the line segment straight line distance --> AFFECTS LABELLED ARRAY!
+                            buff_len = tpl.dist_sl / 2.5
+                            geom_fpls_buff = fp_ls.buffer(buff_len, cap_style=2)
+                            xn_buff = mapping(geom_fpls_buff)
 
-                            # FP roughness (Planar area vs. actual area):
-                            fp_rug = rugosity(w_fp, ds_fp.res[0], logger)  # returns -9999. if error
+                            # Mask the hand grid for each feature...
+                            w_hand, trans_hand = rasterio.mask.mask(ds_hand, [xn_buff], crop=True)
+                            w_hand = w_hand[0]
+                            w_hand[w_hand == ds_hand.nodata] = -9999.
 
+                            # Set up vertical intervals to slice using 2D cross-section horizontal plane:
+                            w_min = w_hand[w_hand > -9999.].min()
+                            w_max = w_hand.max()
+                            arr_slices = np.linspace(w_min, w_max, 50)
+
+                            # Also mask the src layer (1 time) to get the indices of the raster stream line:
+                            w_src, trans_src = rasterio.mask.mask(ds_src, [xn_buff], crop=True)
+                            w_src = w_src[0]
+
+                            # Also mask the floodplain grid:
+                            w_fp, trans_fp = rasterio.mask.mask(ds_fp, [xn_buff], crop=True)
+                            w_fp = w_fp[0]
+
+                            # Aaaand, mask the dem:
+                            w_dem, trans_dem = rasterio.mask.mask(ds_dem, [xn_buff], crop=True)
+                            w_dem = w_dem[0]
+
+                            # NOTE: You need to make sure you're looking at channel pixels here only and not other stuff
+                            # Channel pixel indices:
+                            src_inds = np.where(w_src == tpl.linkno)
+                            # Convert to a set to keep only unique values:
+                            src_inds = set(zip(src_inds[0], src_inds[1]))
+
+                            # To produce labeled array:
+                            s = [[1, 1, 1], [1, 1, 1], [1, 1, 1]]
+
+                            # Consider the blobs of hand pixels in each slice:
+                            lst_count = []
+                            lst_width = []
+                            # set_inds=set([])
+                            lst_inds = []
+                            lst_height = []
+
+                            # Begin vertical slicing using 2D cross-section horizontal plane:
+                            w_inds = np.indices(w_hand.shape)
+                            for i, i_step in enumerate(arr_slices[1:]):  # skip the first entry
+
+                                # Create a binary array where within step height threshold:
+                                w_step = w_hand.copy()
+                                w_step[(w_step < i_step) & (w_step > -9999.)] = 1
+                                w_step[w_step != 1] = 0
+
+                                # scipy labeled array:
+                                labeled_arr, num_feats = label(w_step, structure=s)
+
+                                # You need to loop over num_feats here and do the test:
+                                for feat in np.arange(0, num_feats):  # does this produce the correct number for feat?
+
+                                    # Get the window indices of each feature:
+                                    inds = set(zip(w_inds[0][labeled_arr == feat + 1], w_inds[1][labeled_arr == feat + 1]))
+
+                                    # if they share indices, consider this blob connected to the channel
+                                    if len(src_inds.intersection(inds)) > 0:
+                                        lst_count.append(len(inds))
+                                        lst_width.append(len(inds) * (res ** 2) / tpl.dist_sl)
+                                        lst_height.append(i_step)
+                                        lst_inds.append(inds)
+
+                            # End slices here
+                            df_steps = pd.DataFrame(
+                                {'count': lst_count, 'height': lst_height, 'width': lst_width, 'inds': lst_inds})
+
+                            if len(df_steps.index) < 3:
+                                logger.info('Too few slices!')
+                                lst_bnk_ht.append(-9999.)
+                                lst_chn_wid.append(-9999.)
+                                lst_chn_shp.append(-9999.)
+                                lst_linkno.append(tpl.linkno)
+                                lst_geom.append(tpl.geometry)
+                                # FP metrics:
+                                lst_fpmax.append(-9999.)
+                                lst_fpmin.append(-9999.)
+                                lst_fpstd.append(-9999.)
+                                lst_fprug.append(-9999.)
+                                lst_fpwid.append(-9999.)
+                                lst_fprange.append(-9999.)
+                                lst_fpmin_e.append(-9999.)
+                                lst_fpmax_e.append(-9999.)
+                                lst_fpstd_e.append(-9999.)
+                                lst_fprange_e.append(-9999.)
+                                continue
+
+                            df_steps['dy'] = df_steps.height.diff()
+                            df_steps['dx'] = df_steps.width.diff()
+                            df_steps['delta_width'] = df_steps.dx / df_steps.dy
+                            indx = df_steps.delta_width.iloc[1:].idxmax() - 1
+
+                            chn_wid = df_steps.width.iloc[indx]
+                            bnk_ht = df_steps.height.iloc[indx]
+                            chn_shp = np.arctan(bnk_ht / chn_wid)  # sort of like entrenchment?
+
+                            # Separate the FP and channel pixels using bnk_ht
+                            # Channel pixels only:
+                            for i_set in df_steps.inds.iloc[0:indx+1].tolist():
+                                src_inds.update(i_set)
+
+                            # NEED A TUPLE OF 1D ARRAYS FOR ARRAY INDEXING
+                            lst1, lst2 = zip(*list(src_inds))
+
+                            # the hand grid window values at indices corresponding to channel pixels only?
+                            # w_chn = w_hand[lst1, lst2]  # TODO: Calculate additional chan metrics from this?
+
+                            # Get the FP pixels without the channel pixels:
+                            mask = np.ones_like(w_hand, dtype=bool)
+                            mask[lst1, lst2] = False
+
+                            # Relative elevation (HAND):
+                            try:
+                                w_fp = w_fp[mask]
+                                w_fp = w_fp[w_fp != ds_fp.nodata]  # also remove nodata vals
+
+                                if w_fp.size == 0:
+                                    logger.info('No FP!')
+                                    # There's nothing we can do here related to FP:
+                                    lst_fpmax.append(-9999.)
+                                    lst_fpmin.append(-9999.)
+                                    lst_fpstd.append(-9999.)
+                                    lst_fprug.append(-9999.)
+                                    lst_fpwid.append(-9999.)
+                                    lst_fprange.append(-9999.)
+                                    lst_fpmin_e.append(-9999.)
+                                    lst_fpmax_e.append(-9999.)
+                                    lst_fpstd_e.append(-9999.)
+                                    lst_fprange_e.append(-9999.)
+                                    # Channel metrics:
+                                    lst_bnk_ht.append(bnk_ht)
+                                    lst_chn_wid.append(chn_wid)
+                                    lst_chn_shp.append(chn_shp)
+                                    lst_linkno.append(tpl.linkno)
+                                    lst_geom.append(tpl.geometry)
+                                    continue
+
+                                # FP width:
+                                num_pixels = w_fp.size
+                                area_pixels = num_pixels * (ds_fp.res[0] ** 2)  # get grid resolution
+                                # Calculate width by stretching it along the length of the 2D Xn:
+                                fp_width = area_pixels / (buff_len * 2)
+
+                                if fp_width > 0:
+                                    print('pause')
+
+                                # FP roughness (Planar area vs. actual area):
+                                fp_rug = rugosity(w_fp, ds_fp.res[0], logger)  # returns -9999. if error
+
+                                # Depth range:
+                                fp_max = w_fp.max()
+                                fp_min = w_fp.min()
+                                fp_std = w_fp.std()
+                                fp_range = fp_max - fp_min
+
+                            except Exception as e:
+                                logger.error(f'Error calculating relative elevation FP metrics: {str(e)}')
+                                fp_max = -9999.
+                                fp_min = -9999.
+                                fp_std = -9999.
+                                fp_range = -9999.
+                                fp_rug = -9999.
+                                fp_width = -9999.
+
+                            try:
+                                # Absolute elevation (DEM):
+                                w_dem = w_dem[mask]
+                                w_dem = w_dem[w_dem != ds_dem.nodata]  # also remove nodata vals
+                                # Elevation range
+                                fp_max_e = w_dem.max()
+                                fp_min_e = w_dem.min()
+                                fp_std_e = w_dem.std()
+                                fp_range_e = fp_max_e - fp_min_e
+
+                            except Exception as e:
+                                logger.error(f'Error calculating absolute elevation FP metrics: {str(e)}')
+                                fp_min_e = -9999.
+                                fp_max_e = -9999.
+                                fp_std_e = -9999.
+                                fp_range_e = -9999.
+
+                            # <editor-fold desc="TODO: Write out channel pixels to tif">
                             # # TODO: Write out the channel pixels to a tif?
                             # shp = np.shape(w_hand)
                             # # window bounds in x-y space (west, south, east, north)
@@ -1317,17 +1380,32 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_p
                             #
                             # # assign the FIM window for this catchment to the total array
                             # arr_chn[row_min:row_max, col_min:col_max] = arr_w
+                            # </editor-fold>
 
-                            # Save metrics to lists:
-                            # FP metrics:
+                            # Save metrics to lists
+                            # Relative elevation:
                             lst_fpmax.append(fp_max)
                             lst_fpmin.append(fp_min)
                             lst_fpstd.append(fp_std)
                             lst_fprug.append(fp_rug)
                             lst_fpwid.append(fp_width)
                             lst_fprange.append(fp_range)
+                            # Absolute elevation:
+                            lst_fpmin_e.append(fp_min_e)
+                            lst_fpmax_e.append(fp_max_e)
+                            lst_fpstd_e.append(fp_std_e)
+                            lst_fprange_e.append(fp_range_e)
+                            # Channel metrics:
+                            lst_bnk_ht.append(bnk_ht)
+                            lst_chn_wid.append(chn_wid)
+                            lst_chn_shp.append(chn_shp)
+                            lst_linkno.append(tpl.linkno)
+                            lst_geom.append(tpl.geometry)
+
+                            # logger.info('hey')
                         except Exception as e:
-                            logger.info(f'Zero sized FP array: {str(e)}')
+                            logger.info(f'Error with segment {tpl.Index}; skipping. {str(e)}')
+                            # sys.exit()
                             # FP metrics:
                             lst_fpmax.append(-9999.)
                             lst_fpmin.append(-9999.)
@@ -1335,60 +1413,51 @@ def hand_analysis_chsegs(str_hand_path, str_chanmet_segs, str_src_path, str_fp_p
                             lst_fprug.append(-9999.)
                             lst_fpwid.append(-9999.)
                             lst_fprange.append(-9999.)
-
-                        # Channel metrics:
-                        lst_bnk_ht.append(bnk_ht)
-                        lst_chn_wid.append(chn_wid)
-                        lst_chn_shp.append(chn_shp)
-                        lst_linkno.append(tpl.linkno)
-                        lst_geom.append(tpl.geometry)
-
-                        # logger.info('hey')
-                    except Exception as e:
-                        logger.info(f'Error with segment {tpl.Index}; skipping. {str(e)}')
-                        # sys.exit()
-                        # FP metrics:
-                        lst_fpmax.append(-9999.)
-                        lst_fpmin.append(-9999.)
-                        lst_fpstd.append(-9999.)
-                        lst_fprug.append(-9999.)
-                        lst_fpwid.append(-9999.)
-                        lst_fprange.append(-9999.)
-                        # Channel metrics:
-                        lst_bnk_ht.append(-9999.)
-                        lst_chn_wid.append(-9999.)
-                        lst_chn_shp.append(-9999.)
-                        lst_linkno.append(tpl.linkno)
-                        lst_geom.append(tpl.geometry)
-                        continue
+                            lst_fpmin_e.append(-9999.)
+                            lst_fpmax_e.append(-9999.)
+                            lst_fpstd_e.append(-9999.)
+                            lst_fprange_e.append(-9999.)
+                            # Channel metrics:
+                            lst_bnk_ht.append(-9999.)
+                            lst_chn_wid.append(-9999.)
+                            lst_chn_shp.append(-9999.)
+                            lst_linkno.append(tpl.linkno)
+                            lst_geom.append(tpl.geometry)
+                            continue
 
         # Re-save the channel metrics shapefile with FP metrics added:
-        #        gdf_segs['slp_chan']=lst_lower_slp
-        #        gdf_segs['slp_fp']=lst_upper_slp
-        #        gdf_segs['slp_ratio']=lst_slp_ratio
-        #        gdf_segs['rug_chan']=lst_lower_rug
-        #        gdf_segs['rug_fp']=lst_upper_rug
-        #        gdf_segs['rug_ratio']=lst_rug_ratio
-        #        gdf_segs['bnk_ht2']=lst_bnk_ht
-        #        gdf_segs['bnk_ang2']=lst_bnk_ang
-        #        gdf_segs['chn_wid2']=lst_chn_wid
-        #        gdf_segs.to_file(str_chanmet_segs)
+        gdf_segs['bnk_ht3'] = lst_bnk_ht
+        gdf_segs['chn_shp3'] = lst_chn_shp
+        gdf_segs['chn_wid3'] = lst_chn_wid
+        gdf_segs['fp3_min'] = lst_fpmin
+        gdf_segs['fp3_max'] = lst_fpmax
+        gdf_segs['fp3_std'] = lst_fpstd
+        gdf_segs['fp3_wid'] = lst_fpwid
+        gdf_segs['fp3_rug'] = lst_fprug
+        gdf_segs['fp3_rng'] = lst_fprange
+        gdf_segs['fp3_min_e'] = lst_fpmin_e
+        gdf_segs['fp3_max_e'] = lst_fpmax_e
+        gdf_segs['fp3_std_e'] = lst_fpstd_e
+        gdf_segs['fp3_rng_e'] = lst_fprange_e
 
-        # TESTING
-        gdf_test = gpd.GeoDataFrame()
-        gdf_test.crs = gdf_segs.crs
-        gdf_test['geometry'] = lst_geom
-        gdf_test['bnk_ht2'] = lst_bnk_ht
-        gdf_test['chn_shp'] = lst_chn_shp
-        gdf_test['chn_wid'] = lst_chn_wid
-        gdf_test['linkno'] = lst_linkno
-        gdf_test['fp_min'] = lst_fpmin
-        gdf_test['fp_max'] = lst_fpmax
-        gdf_test['fp_std'] = lst_fpstd
-        gdf_test['fp_wid'] = lst_fpwid
-        gdf_test['fp_rug'] = lst_fprug
-        gdf_test['fp_rng'] = lst_fprange
-        gdf_test.to_file(str_chanmet_segs[:-4] + '_TEST_HAND_ANALYSIS.shp')
+        path_to_file, filename = os.path.split(str_chanmet_segs)
+        gdf_segs.to_file(f'E:\\DRB_Files\\drb_chan_fp_metrics_2019.03.27\\{filename}')
+
+        # TESTING:
+        # gdf_test = gpd.GeoDataFrame()
+        # gdf_test.crs = gdf_segs.crs
+        # gdf_test['geometry'] = lst_geom
+        # gdf_test['bnk_ht2'] = lst_bnk_ht
+        # gdf_test['chn_shp'] = lst_chn_shp
+        # gdf_test['chn_wid'] = lst_chn_wid
+        # gdf_test['linkno'] = lst_linkno
+        # gdf_test['fp_min'] = lst_fpmin
+        # gdf_test['fp_max'] = lst_fpmax
+        # gdf_test['fp_std'] = lst_fpstd
+        # gdf_test['fp_wid'] = lst_fpwid
+        # gdf_test['fp_rug'] = lst_fprug
+        # gdf_test['fp_rng'] = lst_fprange
+        # gdf_test.to_file(str_chanmet_segs[:-4] + '_TEST_HAND_ANALYSIS.shp')
 
 
 def fp_metrics_chsegs(str_fim_path, str_chwid, str_chanmet_segs, logger):
