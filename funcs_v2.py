@@ -11,7 +11,7 @@ import subprocess
 import numpy as np
 from numpy import asarray
 import logging
-from scipy.ndimage import label  # TEST TEST
+from scipy.ndimage import label
 
 # from scipy.stats import gaussian_kde # TEST
 # from scipy.optimize import curve_fit # TEST
