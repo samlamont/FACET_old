@@ -102,6 +102,63 @@ np.seterr(over='raise')
 
 # lstThisSegmentRows, lstThisSegmentCols, midpt_x, midpt_y, p_fpxnlen
 
+def open_memory_tif(arr, meta):
+    with rasterio.Env(GDAL_CACHEMAX=256, GDAL_NUM_THREADS='ALL_CPUS'):
+        with MemoryFile() as memfile:
+            with memfile.open(**meta) as dataset:
+                dataset.write(arr, indexes=1)
+            return memfile.open()
+
+
+def breach_road_crossings(str_nhd_path, str_roads_path, str_dem_path):
+
+    # Build the kernel:
+    # https://stackoverflow.com/questions/39272267/local-maxima-with-circular-window
+    radius = 25  # num pixels
+    kernel = np.zeros((2 * radius + 1, 2 * radius + 1))
+    y, x = np.ogrid[-radius:radius + 1, -radius:radius + 1]
+    mask2 = x ** 2 + y ** 2 <= radius ** 2
+    kernel[mask2] = 1
+
+    # Get the DEM:
+    with rasterio.open(str_dem_path) as ds_dem:
+        profile = ds_dem.profile.copy()
+        arr_dem = ds_dem.read(1)
+
+    # Apply the filter:
+    import scipy.ndimage as sc
+    arr_min = sc.minimum_filter(arr_dem, footprint=kernel)
+
+    # Create in-memory dataset using arr_min:
+    ds_min = open_memory_tif(arr_min, profile)
+
+    # Get the line layers:
+    gdf_nhd = gpd.read_file(str_nhd_path)
+    gdf_roads = gpd.read_file(str_roads_path)
+
+    # Buffer:
+    gdf_nhd['geometry'] = gdf_nhd['geometry'].buffer(25) # projected units (m)
+    gdf_roads['geometry'] = gdf_roads['geometry'].buffer(50) # projected units (m)
+
+    # Intersect:
+    gdf_int = gpd.overlay(gdf_nhd, gdf_roads, how='intersection')
+
+    # rasterio.mask.mask in-memory dataset and buffer intersects
+    int_poly = gdf_int['geometry'].iloc[0]  # is there only one?
+    arr_mask, trans_mask = rasterio.mask.mask(ds_min, int_poly, crop=True, nodata=nodata,
+                                              all_touched=True)
+
+    # mosaic with rasterio.merge?
+    ds_mask = open_memory_tif(arr_mask, profile)
+
+    from rasterio.merge import merge
+    arr_merge, trans_merge = merge([ds_dem, ds_mask])
+
+    # write to arr_merge to tif:
+    with rasterio.open(output_tif_path, 'w', **profile) as ds_out:
+        ds_out.write(arr_merge)
+
+
 def rasterize_gdf(gdf, str_ingrid_path, str_tempgrid, str_outgrid, huc_poly):
     '''
     Thanks to:  https://gis.stackexchange.com/questions/151339/rasterize-a-shapefile-with-geopandas-or-fiona-python
